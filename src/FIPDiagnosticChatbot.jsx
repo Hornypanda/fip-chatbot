@@ -6,7 +6,7 @@ import * as pdfjsLib from 'pdfjs-dist';
 pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
 
 const FIPDiagnosticChatbot = () => {
-  // All state declarations
+  // All state declarations - removed API key related states
   const [messages, setMessages] = useState([
     {
       role: 'assistant',
@@ -16,8 +16,6 @@ const FIPDiagnosticChatbot = () => {
   const [inputMessage, setInputMessage] = useState('');
   const [uploadedFiles, setUploadedFiles] = useState([]);
   const [isLoading, setIsLoading] = useState(false);
-  const [apiKey, setApiKey] = useState('');
-  const [showApiKeyInput, setShowApiKeyInput] = useState(true);
   const [isProcessingPdf, setIsProcessingPdf] = useState(false);
   const fileInputRef = useRef(null);
 
@@ -181,15 +179,6 @@ const FIPDiagnosticChatbot = () => {
   };
 
   const analyzeWithOpenAI = async (userInput, files = []) => {
-    if (!apiKey) {
-      return "Please enter your OpenAI API key to continue.";
-    }
-
-    // Validate API key format
-    if (!apiKey.startsWith('sk-')) {
-      return "Invalid API key format. OpenAI API keys should start with 'sk-'. Please check your API key.";
-    }
-
     try {
       // Prepare the system message with knowledge base
       const systemMessage = `You are a FIP (Feline Infectious Peritonitis) diagnostic assistant. You must base ALL responses EXCLUSIVELY on the following vetted knowledge base from FIP Warriors® India x FSGI Foundation and ABCD veterinary guidelines:
@@ -292,7 +281,7 @@ Remember: A:G ratio <0.5 is the primary FIP indicator. Never confirm FIP without
         text: textContent
       });
 
-      // Prepare messages for backend API
+      // Prepare messages for backend API - removed apiKey from request body
       const messages = [
         {
           role: "system",
@@ -306,7 +295,7 @@ Remember: A:G ratio <0.5 is the primary FIP indicator. Never confirm FIP without
 
       console.log("Calling backend API...");
 
-      // Call your Netlify function instead of OpenAI directly
+      // Call your Netlify function - no longer sending API key
       const apiEndpoint = '/.netlify/functions/openai';
 
       const response = await fetch(apiEndpoint, {
@@ -316,7 +305,6 @@ Remember: A:G ratio <0.5 is the primary FIP indicator. Never confirm FIP without
         },
         body: JSON.stringify({
           messages: messages,
-          apiKey: apiKey,
           model: "gpt-4o-mini" // Using mini model for cost efficiency
         })
       });
@@ -326,11 +314,13 @@ Remember: A:G ratio <0.5 is the primary FIP indicator. Never confirm FIP without
         console.error("Backend API Error:", errorData);
         
         if (response.status === 401) {
-          return "❌ **Invalid API Key**: Please check your OpenAI API key and try again.";
+          return "❌ **Authentication Error**: Server API key configuration issue. Please contact the administrator.";
         } else if (response.status === 429) {
           return "⏳ **Rate Limit**: Too many requests. Please wait a moment and try again.";
         } else if (response.status === 402) {
-          return "💳 **Billing Issue**: Insufficient credits. Please check your OpenAI account billing.";
+          return "💳 **Billing Issue**: Insufficient credits. Please contact the administrator to check OpenAI account billing.";
+        } else if (response.status === 500 && errorData.error?.includes('API key not configured')) {
+          return "⚙️ **Configuration Error**: Server API key not configured. Please contact the administrator.";
         } else {
           return `❌ **API Error** (${response.status}): ${errorData.error || 'Unknown error'}`;
         }
@@ -353,12 +343,14 @@ Remember: A:G ratio <0.5 is the primary FIP indicator. Never confirm FIP without
 **If you're running locally**: 
 - Make sure you're using \`netlify dev\` to run the development server
 - The function should be available at \`/.netlify/functions/openai\`
+- Check that OPENAI_API_KEY is set in your .env file
 
 **If deployed**: 
 - Check that your Netlify function deployed successfully
+- Verify OPENAI_API_KEY environment variable is set in Netlify dashboard
 - View function logs in Netlify dashboard
 
-**For testing**: You can also try the Claude API version which works directly from the browser.`;
+**Environment Variable Setup**: Add OPENAI_API_KEY=your_key_here to your environment`;
       }
       
       return `❌ **Error**: ${error.message}`;
@@ -420,66 +412,16 @@ Remember: A:G ratio <0.5 is the primary FIP indicator. Never confirm FIP without
             </div>
           </div>
 
-          {/* API Key Input */}
-          {showApiKeyInput && (
-            <div className="p-6 bg-yellow-50 border-b border-yellow-200">
-              <div className="flex items-start gap-3">
-                <AlertTriangle className="w-5 h-5 text-yellow-600 mt-0.5 flex-shrink-0" />
-                <div className="flex-1">
-                  <h3 className="font-semibold text-yellow-800 mb-2">OpenAI API Key Required</h3>
-                  <p className="text-sm text-yellow-700 mb-3">
-                    Please enter your OpenAI API key to use this diagnostic tool. Your key is stored locally and never shared.
-                  </p>
-                  <div className="flex gap-3">
-                    <input
-                      type="password"
-                      value={apiKey}
-                      onChange={(e) => setApiKey(e.target.value)}
-                      placeholder="sk-..."
-                      className="flex-1 p-3 border border-yellow-300 rounded-lg focus:ring-2 focus:ring-yellow-500 focus:border-transparent"
-                    />
-                    <button
-                      onClick={() => {
-                        if (apiKey.trim()) {
-                          setShowApiKeyInput(false);
-                        }
-                      }}
-                      disabled={!apiKey.trim()}
-                      className="px-6 py-3 bg-yellow-600 text-white rounded-lg hover:bg-yellow-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors font-medium"
-                    >
-                      Connect
-                    </button>
-                  </div>
-                  <p className="text-xs text-yellow-600 mt-2">
-                    Get your API key from <a href="https://platform.openai.com/api-keys" target="_blank" rel="noopener noreferrer" className="underline">OpenAI Platform</a>
-                  </p>
-                </div>
-              </div>
+          {/* Status Indicator */}
+          <div className="p-4 bg-green-50 border-b border-green-200">
+            <div className="flex items-center gap-2">
+              <CheckCircle className="w-4 h-4 text-green-600" />
+              <span className="text-sm font-medium text-green-800">Ready for Analysis</span>
             </div>
-          )}
-
-          {!showApiKeyInput && (
-            <div className="p-4 bg-green-50 border-b border-green-200">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-2">
-                  <CheckCircle className="w-4 h-4 text-green-600" />
-                  <span className="text-sm font-medium text-green-800">Using CORS Proxy for Testing</span>
-                </div>
-                <button
-                  onClick={() => {
-                    setApiKey('');
-                    setShowApiKeyInput(true);
-                  }}
-                  className="text-xs text-green-600 hover:text-green-800 underline"
-                >
-                  Change API Key
-                </button>
-              </div>
-              <p className="text-xs text-green-700 mt-1">
-                Note: For production deployment, you'll need a backend API to handle OpenAI calls securely.
-              </p>
-            </div>
-          )}
+            <p className="text-xs text-green-700 mt-1">
+              API key configured via environment variable. Upload medical documents to begin analysis.
+            </p>
+          </div>
 
           {/* Key Information Cards */}
           <div className="p-6 bg-gradient-to-r from-blue-50 to-indigo-50">
