@@ -578,7 +578,7 @@ Remember: A:G ratio <0.5 is the primary FIP indicator. Never confirm FIP without
               </div>
             )}
             
-            <div className="flex gap-4">
+            <div className="space-y-4">
               <input
                 ref={fileInputRef}
                 type="file"
@@ -588,30 +588,33 @@ Remember: A:G ratio <0.5 is the primary FIP indicator. Never confirm FIP without
                 className="hidden"
               />
               
+              {/* Upload button - full width on mobile */}
               <button
                 onClick={() => fileInputRef.current?.click()}
-                className="flex items-center gap-2 px-6 py-3 bg-gradient-to-r from-gray-100 to-gray-200 text-gray-700 rounded-xl hover:from-gray-200 hover:to-gray-300 transition-all duration-200 shadow-sm font-medium"
+                className="w-full sm:w-auto flex items-center justify-center gap-2 px-6 py-3 bg-gradient-to-r from-gray-100 to-gray-200 text-gray-700 rounded-xl hover:from-gray-200 hover:to-gray-300 transition-all duration-200 shadow-sm font-medium"
               >
                 <Upload className="w-4 h-4" />
                 Upload Files
               </button>
               
-              <div className="flex-1 flex gap-3">
+              {/* Input area - stack on mobile, flex on desktop */}
+              <div className="flex flex-col sm:flex-row gap-3">
                 <textarea
                   value={inputMessage}
                   onChange={(e) => setInputMessage(e.target.value)}
                   onKeyPress={handleKeyPress}
                   placeholder="Describe your cat's symptoms, age, and any concerns..."
-                  className="flex-1 p-4 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent resize-none shadow-sm"
+                  className="flex-1 p-4 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent resize-none shadow-sm min-h-[100px]"
                   rows="3"
                 />
                 
                 <button
                   onClick={handleSendMessage}
                   disabled={isLoading || isProcessingPdf || (!inputMessage.trim() && uploadedFiles.length === 0)}
-                  className="px-6 py-3 bg-gradient-to-r from-blue-500 to-indigo-600 text-white rounded-xl hover:from-blue-600 hover:to-indigo-700 disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200 shadow-lg font-medium"
+                  className="w-full sm:w-auto px-6 py-3 bg-gradient-to-r from-blue-500 to-indigo-600 text-white rounded-xl hover:from-blue-600 hover:to-indigo-700 disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200 shadow-lg font-medium flex items-center justify-center gap-2"
                 >
                   <Send className="w-5 h-5" />
+                  <span className="sm:hidden">Send Message</span>
                 </button>
               </div>
             </div>
