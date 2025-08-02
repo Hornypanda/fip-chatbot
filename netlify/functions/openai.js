@@ -1,4 +1,4 @@
-// netlify/functions/openai.js - Netlify Function
+// netlify/functions/openai.js - Netlify Function with Environment Variable
 exports.handler = async (event, context) => {
   // Handle CORS preflight requests
   const headers = {
@@ -25,32 +25,35 @@ exports.handler = async (event, context) => {
   }
 
   try {
+    // Get API key from environment variable
+    const apiKey = process.env.OPENAI_API_KEY;
+    
+    if (!apiKey) {
+      console.error('OPENAI_API_KEY environment variable not set');
+      return {
+        statusCode: 500,
+        headers,
+        body: JSON.stringify({ 
+          error: 'Server configuration error: API key not configured' 
+        }),
+      };
+    }
+
     // Parse request body
-    const { messages, apiKey, model = "gpt-4o-mini" } = JSON.parse(event.body);
+    const { messages, model = "gpt-4o-mini" } = JSON.parse(event.body);
 
     // Validate required fields
-    if (!messages || !apiKey) {
+    if (!messages) {
       return {
         statusCode: 400,
         headers,
         body: JSON.stringify({ 
-          error: 'Missing required fields: messages and apiKey' 
+          error: 'Missing required field: messages' 
         }),
       };
     }
 
-    // Validate API key format
-    if (!apiKey.startsWith('sk-')) {
-      return {
-        statusCode: 400,
-        headers,
-        body: JSON.stringify({ 
-          error: 'Invalid API key format. Must start with sk-' 
-        }),
-      };
-    }
-
-    console.log('Calling OpenAI API...');
+    console.log('Calling OpenAI API with environment variable...');
 
     // Call OpenAI API
     const openaiResponse = await fetch('https://api.openai.com/v1/chat/completions', {
