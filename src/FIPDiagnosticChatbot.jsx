@@ -1,11 +1,12 @@
 import React, { useState, useRef } from 'react';
-import { Upload, Send, FileText, Image, MessageCircle, AlertTriangle, Stethoscope, Heart, CheckCircle, Info } from 'lucide-react';
+import { Upload, Send, FileText, Image, MessageCircle, AlertTriangle, Stethoscope, CheckCircle, Info } from 'lucide-react';
 import * as pdfjsLib from 'pdfjs-dist';
 
 // Configure PDF.js worker
 pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
 
 const FIPDiagnosticChatbot = () => {
+  // All state declarations
   const [messages, setMessages] = useState([
     {
       role: 'assistant',
@@ -14,7 +15,79 @@ const FIPDiagnosticChatbot = () => {
   ]);
   const [inputMessage, setInputMessage] = useState('');
   const [uploadedFiles, setUploadedFiles] = useState([]);
+  const [isLoading, setIsLoading] = useState(false);
+  const [apiKey, setApiKey] = useState('');
+  const [showApiKeyInput, setShowApiKeyInput] = useState(true);
   const [isProcessingPdf, setIsProcessingPdf] = useState(false);
+  const fileInputRef = useRef(null);
+
+  // FIP Knowledge Base - extracted from the provided documents
+  const fipKnowledgeBase = {
+    types: {
+      wet: "Usually beginning with high temperature, loss of appetite and lethargy, cats with Wet FIP have abdominal effusions usually accompanied with an enlarged abdominal cavity, basically the stomach appearing abnormally enlarged, rounded and bloated. Sometimes vomiting, diarrhea or jaundice are added.",
+      pleural: "Showing similar symptoms of lethargy, high temperature and loss of appetite as Wet FIP, in Pleural FIP cats have thoracic (chest) effusions often accompanied with breathing problems (dyspnea). Sometimes this can be confused with pneumonia leading to delayed diagnosis.",
+      dry: "Often more difficult to diagnose, Dry FIP also tends to be more chronic, progressing over a few weeks to months. With no fluid accumulation, this form presents itself with some subtle symptoms like fatigue and gradual weight loss, later accompanied with additional signs depending on the organs affected.",
+      ocular: "When the virus manages to reach the eyes it's called Ocular FIP. Uveitis can affect the eyes, making them look cloudy and changing the colour of the iris. Conjunctivitis and inflammation or bleeding in the anterior chamber are common too.",
+      neurological: "When the virus crosses the blood-brain barrier, inflammation can enter the brain and spinal cord and cause a spectrum of progressive neurologic abnormalities. Signs include ataxia (uncoordinated movements), head tilt, unsteady walk, floor or wall licking, postural reaction deficits, seizures, paralysis, personality changes and even dementia."
+    },
+    bloodworkIndicators: {
+      wetFIP: {
+        hematocrit: "reduced",
+        reticulocyte: "normal to reduced",
+        neutrophils: "increased",
+        lymphocytes: "reduced",
+        mcv: "reduced",
+        totalProtein: "normal to elevated",
+        albumin: "normal to reduced",
+        globulins: "increased",
+        gammaglobulins: "increased",
+        ag: "reduced (<0.5)",
+        bilirubin: "increased",
+        acutePhaseProteins: "increased"
+      },
+      dryFIP: {
+        hematocrit: "normal to reduced",
+        reticulocyte: "normal to reduced",
+        neutrophils: "increased",
+        lymphocytes: "normal to reduced",
+        mcv: "reduced",
+        totalProtein: "normal to elevated",
+        albumin: "normal to reduced",
+        globulins: "increased",
+        gammaglobulins: "increased",
+        ag: "reduced (<0.5)",
+        bilirubin: "normal to elevated",
+        acutePhaseProteins: "increased"
+      }
+    },
+    diagnosticTools: {
+      ultrasound: "The presence of abdominal or thoracic fluid strongly supports a diagnosis of wet or pleural FIP. One of the earliest and most telling ultrasound signs is mesenteric lymphadenopathy. Other useful findings include hepatic and splenic changes, thickened intestinal walls with loss of layering, or peritoneal inflammation.",
+      pcr: "A positive PCR result, especially on effusion or FNA from a lymph node- is highly specific for FIP. However, a negative result does not rule it out, especially in dry cases.",
+      rivalta: "A simple, in-house test that can support FIP diagnosis. While it helps differentiate protein-rich effusions, it is not FIP-specific and both false positives and negatives are possible.",
+      imaging: "MRI is particularly useful in neuro FIP - findings may include meningeal enhancement, ventricular dilation, or brain edema. CT scans may reveal fluid accumulation, lymphadenopathy, or organ abnormalities not clearly visible on ultrasound."
+    },
+    recommendedSamples: {
+      wet: "Effusion",
+      pleural: "Effusion",
+      dry: "Fine needle aspirate of affected Mesenteric Lymph Nodes",
+      ocular: "Aqueous humor",
+      neurological: "Cerebrospinal fluid (via CSF tap)"
+    }
+  };
+
+  // Helper function to convert data URL to array buffer
+  const dataURLToArrayBuffer = (dataURL) => {
+    const base64 = dataURL.split(',')[1];
+    const binaryString = window.atob(base64);
+    const arrayBuffer = new ArrayBuffer(binaryString.length);
+    const uint8Array = new Uint8Array(arrayBuffer);
+    
+    for (let i = 0; i < binaryString.length; i++) {
+      uint8Array[i] = binaryString.charCodeAt(i);
+    }
+    
+    return arrayBuffer;
+  };
 
   // PDF to Image conversion function
   const convertPdfToImages = async (pdfFile) => {
@@ -72,75 +145,6 @@ const FIPDiagnosticChatbot = () => {
     }
   };
 
-  // Helper function to convert data URL to array buffer
-  const dataURLToArrayBuffer = (dataURL) => {
-    const base64 = dataURL.split(',')[1];
-    const binaryString = window.atob(base64);
-    const arrayBuffer = new ArrayBuffer(binaryString.length);
-    const uint8Array = new Uint8Array(arrayBuffer);
-    
-    for (let i = 0; i < binaryString.length; i++) {
-      uint8Array[i] = binaryString.charCodeAt(i);
-    }
-    
-    return arrayBuffer;
-  };
-  const fileInputRef = useRef(null);
-
-  // FIP Knowledge Base - extracted from the provided documents
-  const fipKnowledgeBase = {
-    types: {
-      wet: "Usually beginning with high temperature, loss of appetite and lethargy, cats with Wet FIP have abdominal effusions usually accompanied with an enlarged abdominal cavity, basically the stomach appearing abnormally enlarged, rounded and bloated. Sometimes vomiting, diarrhea or jaundice are added.",
-      pleural: "Showing similar symptoms of lethargy, high temperature and loss of appetite as Wet FIP, in Pleural FIP cats have thoracic (chest) effusions often accompanied with breathing problems (dyspnea). Sometimes this can be confused with pneumonia leading to delayed diagnosis.",
-      dry: "Often more difficult to diagnose, Dry FIP also tends to be more chronic, progressing over a few weeks to months. With no fluid accumulation, this form presents itself with some subtle symptoms like fatigue and gradual weight loss, later accompanied with additional signs depending on the organs affected.",
-      ocular: "When the virus manages to reach the eyes it's called Ocular FIP. Uveitis can affect the eyes, making them look cloudy and changing the colour of the iris. Conjunctivitis and inflammation or bleeding in the anterior chamber are common too.",
-      neurological: "When the virus crosses the blood-brain barrier, inflammation can enter the brain and spinal cord and cause a spectrum of progressive neurologic abnormalities. Signs include ataxia (uncoordinated movements), head tilt, unsteady walk, floor or wall licking, postural reaction deficits, seizures, paralysis, personality changes and even dementia."
-    },
-    bloodworkIndicators: {
-      wetFIP: {
-        hematocrit: "reduced",
-        reticulocyte: "normal to reduced",
-        neutrophils: "increased",
-        lymphocytes: "reduced",
-        mcv: "reduced",
-        totalProtein: "normal to elevated",
-        albumin: "normal to reduced",
-        globulins: "increased",
-        gammaglobulins: "increased",
-        ag: "reduced (<0.5)",
-        bilirubin: "increased",
-        acutePhaseProteins: "increased"
-      },
-      dryFIP: {
-        hematocrit: "normal to reduced",
-        reticulocyte: "normal to reduced",
-        neutrophils: "increased",
-        lymphocytes: "normal to reduced",
-        mcv: "reduced",
-        totalProtein: "normal to elevated",
-        albumin: "normal to reduced",
-        globulins: "increased",
-        gammaglobulins: "increased",
-        ag: "reduced (<0.5)",
-        bilirubin: "normal to elevated",
-        acutePhaseProteins: "increased"
-      }
-    },
-    diagnosticTools: {
-      ultrasound: "The presence of abdominal or thoracic fluid strongly supports a diagnosis of wet or pleural FIP. One of the earliest and most telling ultrasound signs is mesenteric lymphadenopathy. Other useful findings include hepatic and splenic changes, thickened intestinal walls with loss of layering, or peritoneal inflammation.",
-      pcr: "A positive PCR result, especially on effusion or FNA from a lymph node- is highly specific for FIP. However, a negative result does not rule it out, especially in dry cases.",
-      rivalta: "A simple, in-house test that can support FIP diagnosis. While it helps differentiate protein-rich effusions, it is not FIP-specific and both false positives and negatives are possible.",
-      imaging: "MRI is particularly useful in neuro FIP - findings may include meningeal enhancement, ventricular dilation, or brain edema. CT scans may reveal fluid accumulation, lymphadenopathy, or organ abnormalities not clearly visible on ultrasound."
-    },
-    recommendedSamples: {
-      wet: "Effusion",
-      pleural: "Effusion",
-      dry: "Fine needle aspirate of affected Mesenteric Lymph Nodes",
-      ocular: "Aqueous humor",
-      neurological: "Cerebrospinal fluid (via CSF tap)"
-    }
-  };
-
   const handleFileUpload = async (event) => {
     const files = Array.from(event.target.files);
     const processedFiles = [];
@@ -175,9 +179,6 @@ const FIPDiagnosticChatbot = () => {
     
     setUploadedFiles(prev => [...prev, ...processedFiles]);
   };
-
-  const [apiKey, setApiKey] = useState('');
-  const [showApiKeyInput, setShowApiKeyInput] = useState(true);
 
   const analyzeWithOpenAI = async (userInput, files = []) => {
     if (!apiKey) {
@@ -501,10 +502,10 @@ Remember: A:G ratio <0.5 is the primary FIP indicator. Never confirm FIP without
               
               <div className="bg-white rounded-xl p-4 border-l-4 border-green-500 shadow-sm">
                 <div className="flex items-center gap-3 mb-2">
-                  <Heart className="w-5 h-5 text-green-500" />
-                  <h3 className="font-semibold text-gray-800">Additional Support</h3>
+                  <Info className="w-5 h-5 text-green-500" />
+                  <h3 className="font-semibold text-gray-800">PDF Support</h3>
                 </div>
-                <p className="text-sm text-gray-600">CBC values strengthen the assessment</p>
+                <p className="text-sm text-gray-600">PDFs auto-converted to images for analysis</p>
               </div>
             </div>
 
