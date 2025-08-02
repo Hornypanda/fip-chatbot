@@ -1,9 +1,5 @@
 import React, { useState, useRef } from 'react';
 import { Upload, Send, FileText, Image, MessageCircle, AlertTriangle, Stethoscope, CheckCircle, Info } from 'lucide-react';
-import * as pdfjsLib from 'pdfjs-dist';
-
-// Configure PDF.js worker
-pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
 
 const FIPDiagnosticChatbot = () => {
   // All state declarations
@@ -18,7 +14,6 @@ const FIPDiagnosticChatbot = () => {
   const [isLoading, setIsLoading] = useState(false);
   const [apiKey, setApiKey] = useState('');
   const [showApiKeyInput, setShowApiKeyInput] = useState(true);
-  const [isProcessingPdf, setIsProcessingPdf] = useState(false);
   const fileInputRef = useRef(null);
 
   // FIP Knowledge Base - extracted from the provided documents
@@ -75,109 +70,16 @@ const FIPDiagnosticChatbot = () => {
     }
   };
 
-  // Helper function to convert data URL to array buffer
-  const dataURLToArrayBuffer = (dataURL) => {
-    const base64 = dataURL.split(',')[1];
-    const binaryString = window.atob(base64);
-    const arrayBuffer = new ArrayBuffer(binaryString.length);
-    const uint8Array = new Uint8Array(arrayBuffer);
-    
-    for (let i = 0; i < binaryString.length; i++) {
-      uint8Array[i] = binaryString.charCodeAt(i);
-    }
-    
-    return arrayBuffer;
-  };
-
-  // PDF to Image conversion function
-  const convertPdfToImages = async (pdfFile) => {
-    try {
-      setIsProcessingPdf(true);
-      
-      const arrayBuffer = await pdfFile.arrayBuffer();
-      const pdf = await pdfjsLib.getDocument({ data: arrayBuffer }).promise;
-      
-      const images = [];
-      
-      for (let pageNum = 1; pageNum <= pdf.numPages; pageNum++) {
-        const page = await pdf.getPage(pageNum);
-        
-        // Create canvas for rendering
-        const canvas = document.createElement('canvas');
-        const context = canvas.getContext('2d');
-        
-        // Set high resolution for better text recognition
-        const scale = 2.0;
-        const viewport = page.getViewport({ scale });
-        
-        canvas.width = viewport.width;
-        canvas.height = viewport.height;
-        
-        // Render page to canvas
-        await page.render({
-          canvasContext: context,
-          viewport: viewport
-        }).promise;
-        
-        // Convert canvas to image data
-        const imageDataUrl = canvas.toDataURL('image/png', 0.9);
-        
-        // Create a file-like object for the converted image
-        const imageFile = {
-          name: `${pdfFile.name}_page_${pageNum}.png`,
-          type: 'image/png',
-          size: imageDataUrl.length * 0.75, // Approximate size
-          file: {
-            arrayBuffer: () => Promise.resolve(dataURLToArrayBuffer(imageDataUrl))
-          },
-          dataUrl: imageDataUrl
-        };
-        
-        images.push(imageFile);
-      }
-      
-      return images;
-    } catch (error) {
-      console.error('Error converting PDF to images:', error);
-      throw new Error(`Failed to convert PDF: ${error.message}`);
-    } finally {
-      setIsProcessingPdf(false);
-    }
-  };
-
-  const handleFileUpload = async (event) => {
+  // Simple file upload handler
+  const handleFileUpload = (event) => {
     const files = Array.from(event.target.files);
-    const processedFiles = [];
-    
-    for (const file of files) {
-      if (file.type === 'application/pdf') {
-        try {
-          // Convert PDF to images
-          const convertedImages = await convertPdfToImages(file);
-          processedFiles.push(...convertedImages);
-        } catch (error) {
-          console.error('PDF conversion error:', error);
-          // Add original PDF file with error note
-          processedFiles.push({
-            name: file.name,
-            type: file.type,
-            size: file.size,
-            file: file,
-            conversionError: error.message
-          });
-        }
-      } else {
-        // Regular file processing
-        processedFiles.push({
-          name: file.name,
-          type: file.type,
-          size: file.size,
-          file: file
-        });
-      }
-    }
-    
-    setUploadedFiles(prev => [...prev, ...processedFiles]);
+    const newFiles = files.map(file => ({
+      name: file.name,
+      type: file.type,
+      size: file.size,
+      file: file
+    }));
+    setUploadedFiles(prev => [...prev, ...newFiles]);
   };
 
   const analyzeWithOpenAI = async (userInput, files = []) => {
@@ -230,35 +132,28 @@ ANALYSIS INSTRUCTIONS:
       // Handle uploaded files
       const imageFiles = files.filter(f => f.type.startsWith('image/'));
       const pdfFiles = files.filter(f => f.type === 'application/pdf');
+      const documentFiles = files.filter(f => !f.type.startsWith('image/') && f.type !== 'application/pdf');
       
+      // Process images
       if (imageFiles.length > 0) {
         textContent += `${imageFiles.length} medical image(s) uploaded for analysis. Please examine for FIP indicators.\n\n`;
         
-        // Process images for OpenAI (including converted PDF pages)
         for (const file of imageFiles) {
           try {
-            let base64Data;
-            
-            // Check if this is a converted PDF image
-            if (file.dataUrl) {
-              base64Data = file.dataUrl.split(",")[1];
-            } else {
-              // Regular image file
-              base64Data = await new Promise((resolve, reject) => {
-                const reader = new FileReader();
-                reader.onload = () => {
-                  const base64 = reader.result.split(",")[1];
-                  resolve(base64);
-                };
-                reader.onerror = reject;
-                reader.readAsDataURL(file.file);
-              });
-            }
+            const base64Data = await new Promise((resolve, reject) => {
+              const reader = new FileReader();
+              reader.onload = () => {
+                const base64 = reader.result.split(",")[1];
+                resolve(base64);
+              };
+              reader.onerror = reject;
+              reader.readAsDataURL(file.file);
+            });
 
             userMessageContent.push({
               type: "image_url",
               image_url: {
-                url: `data:image/png;base64,${base64Data}`,
+                url: `data:${file.type};base64,${base64Data}`,
                 detail: "high"
               }
             });
@@ -269,20 +164,49 @@ ANALYSIS INSTRUCTIONS:
         }
       }
       
+      // Process PDFs using OpenAI's native support
       if (pdfFiles.length > 0) {
-        const pdfErrors = pdfFiles.filter(f => f.conversionError);
-        if (pdfErrors.length > 0) {
-          textContent += `${pdfErrors.length} PDF document(s) could not be converted to images. Please describe their contents or try uploading screenshots.\n\n`;
+        textContent += `${pdfFiles.length} PDF document(s) uploaded for analysis. Please read and analyze these documents for:\n- Blood work parameters and compare them against the FIP indicators\n- Veterinary reports and clinical findings\n- Lab results and diagnostic test outcomes\n- Any medical history or clinical observations relevant to FIP diagnosis\n\n`;
+        
+        for (const file of pdfFiles) {
+          try {
+            const base64Data = await new Promise((resolve, reject) => {
+              const reader = new FileReader();
+              reader.onload = () => {
+                const base64 = reader.result.split(",")[1];
+                resolve(base64);
+              };
+              reader.onerror = reject;
+              reader.readAsDataURL(file.file);
+            });
+
+            userMessageContent.push({
+              type: "document",
+              document: {
+                type: "base64",
+                media_type: "application/pdf",
+                data: base64Data
+              }
+            });
+          } catch (error) {
+            console.error("Error processing PDF:", error);
+            textContent += `Error processing PDF: ${file.name}\n`;
+          }
         }
+      }
+      
+      if (documentFiles.length > 0) {
+        textContent += `${documentFiles.length} other document(s) uploaded: ${documentFiles.map(f => f.name).join(', ')}\n\n`;
       }
 
       textContent += `Please provide a comprehensive FIP assessment:
 
 1. **Critical Blood Parameters**: Check for A:G ratio, total protein, globulins
-2. **Image Analysis** (if provided): Identify any FIP-related findings
-3. **Clinical Assessment**: Match symptoms to FIP types from knowledge base  
-4. **Diagnostic Recommendations**: Next steps based on available data
-5. **Veterinary Emphasis**: Stress professional consultation
+2. **Document Analysis** (if provided): Read and analyze uploaded PDFs for blood work, veterinary reports, lab results
+3. **Image Analysis** (if provided): Identify any FIP-related findings in X-rays or photos
+4. **Clinical Assessment**: Match symptoms to FIP types from knowledge base  
+5. **Diagnostic Recommendations**: Next steps based on available data
+6. **Veterinary Emphasis**: Stress professional consultation
 
 Remember: A:G ratio <0.5 is the primary FIP indicator. Never confirm FIP without proper blood work.`;
 
@@ -503,9 +427,9 @@ Remember: A:G ratio <0.5 is the primary FIP indicator. Never confirm FIP without
               <div className="bg-white rounded-xl p-4 border-l-4 border-green-500 shadow-sm">
                 <div className="flex items-center gap-3 mb-2">
                   <Info className="w-5 h-5 text-green-500" />
-                  <h3 className="font-semibold text-gray-800">PDF Support</h3>
+                  <h3 className="font-semibold text-gray-800">Native PDF Support</h3>
                 </div>
-                <p className="text-sm text-gray-600">PDFs auto-converted to images for analysis</p>
+                <p className="text-sm text-gray-600">PDFs analyzed directly by OpenAI's advanced models</p>
               </div>
             </div>
 
@@ -605,11 +529,8 @@ Remember: A:G ratio <0.5 is the primary FIP indicator. Never confirm FIP without
                         }
                         <div>
                           <span className="text-sm font-medium text-gray-700">{file.name}</span>
-                          {file.conversionError && (
-                            <p className="text-xs text-red-600">Conversion failed: {file.conversionError}</p>
-                          )}
-                          {file.name.includes('_page_') && (
-                            <p className="text-xs text-green-600">✓ Converted from PDF</p>
+                          {file.type === 'application/pdf' && (
+                            <p className="text-xs text-green-600">✓ Will be analyzed by OpenAI</p>
                           )}
                         </div>
                         <span className="text-xs text-gray-500">
@@ -625,14 +546,6 @@ Remember: A:G ratio <0.5 is the primary FIP indicator. Never confirm FIP without
                     </div>
                   ))}
                 </div>
-                {isProcessingPdf && (
-                  <div className="mt-3 p-3 bg-yellow-50 rounded-lg border border-yellow-200">
-                    <div className="flex items-center gap-2">
-                      <div className="w-4 h-4 border-2 border-yellow-600 border-t-transparent rounded-full animate-spin"></div>
-                      <span className="text-sm text-yellow-800">Converting PDF to images...</span>
-                    </div>
-                  </div>
-                )}
               </div>
             )}
             
@@ -666,7 +579,7 @@ Remember: A:G ratio <0.5 is the primary FIP indicator. Never confirm FIP without
                 
                 <button
                   onClick={handleSendMessage}
-                  disabled={isLoading || isProcessingPdf || (!inputMessage.trim() && uploadedFiles.length === 0)}
+                  disabled={isLoading || (!inputMessage.trim() && uploadedFiles.length === 0)}
                   className="px-6 py-3 bg-gradient-to-r from-blue-500 to-indigo-600 text-white rounded-xl hover:from-blue-600 hover:to-indigo-700 disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200 shadow-lg font-medium"
                 >
                   <Send className="w-5 h-5" />
