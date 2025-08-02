@@ -204,9 +204,40 @@ ANALYSIS INSTRUCTIONS:
 - Focus on A:G ratio as primary indicator
 - Analyze images for FIP signs (fluid, lymphadenopathy, organ changes)
 - Always request missing critical blood parameters
-- Provide structured medical assessments`;
+- Provide structured medical assessments
+- Maintain conversation context and refer to previously discussed information`;
 
-      // Prepare user message content
+      // Convert the UI messages to API format for conversation history
+      const conversationMessages = [];
+      
+      // Add system message first
+      conversationMessages.push({
+        role: "system",
+        content: systemMessage
+      });
+
+      // Convert previous messages to API format (excluding the initial assistant greeting)
+      for (let i = 1; i < messages.length; i++) {
+        const msg = messages[i];
+        if (msg.role === 'user') {
+          // For user messages, convert to simple text format
+          let content = msg.content;
+          if (msg.files && msg.files.length > 0) {
+            content += `\n\nFiles uploaded: ${msg.files.map(f => f.name).join(', ')}`;
+          }
+          conversationMessages.push({
+            role: "user",
+            content: content
+          });
+        } else if (msg.role === 'assistant') {
+          conversationMessages.push({
+            role: "assistant",
+            content: msg.content
+          });
+        }
+      }
+
+      // Prepare current user message content
       let userMessageContent = [];
       
       // Add text content
@@ -265,7 +296,9 @@ ANALYSIS INSTRUCTIONS:
         }
       }
 
-      textContent += `Please provide a comprehensive FIP assessment:
+      // Only add the assessment instructions for the first user message
+      if (conversationMessages.length === 1) {
+        textContent += `Please provide a comprehensive FIP assessment:
 
 1. **Critical Blood Parameters**: Check for A:G ratio, total protein, globulins
 2. **Image Analysis** (if provided): Identify any FIP-related findings
@@ -274,6 +307,7 @@ ANALYSIS INSTRUCTIONS:
 5. **Veterinary Emphasis**: Stress professional consultation
 
 Remember: A:G ratio <0.5 is the primary FIP indicator. Never confirm FIP without proper blood work.`;
+      }
 
       // Add text to user message content
       userMessageContent.push({
@@ -281,21 +315,15 @@ Remember: A:G ratio <0.5 is the primary FIP indicator. Never confirm FIP without
         text: textContent
       });
 
-      // Prepare messages for backend API - removed apiKey from request body
-      const messages = [
-        {
-          role: "system",
-          content: systemMessage
-        },
-        {
-          role: "user",
-          content: userMessageContent
-        }
-      ];
+      // Add current user message to conversation
+      conversationMessages.push({
+        role: "user",
+        content: userMessageContent
+      });
 
-      console.log("Calling backend API...");
+      console.log("Calling backend API with conversation history...");
 
-      // Call your Netlify function - no longer sending API key
+      // Call your Netlify function with full conversation history
       const apiEndpoint = '/.netlify/functions/openai';
 
       const response = await fetch(apiEndpoint, {
@@ -304,7 +332,7 @@ Remember: A:G ratio <0.5 is the primary FIP indicator. Never confirm FIP without
           "Content-Type": "application/json",
         },
         body: JSON.stringify({
-          messages: messages,
+          messages: conversationMessages,
           model: "gpt-4o-mini" // Using mini model for cost efficiency
         })
       });
