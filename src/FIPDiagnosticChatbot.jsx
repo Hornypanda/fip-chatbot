@@ -1,22 +1,31 @@
-// FIP Knowledge Base - comprehensive data from ABCD Guidelines 2024, UC Davis, Cornell, and FIP Warriors India x FSGI Foundation
+import React, { useState, useRef } from 'react';
+import { Upload, Send, FileText, Image, MessageCircle, AlertTriangle, Stethoscope, CheckCircle, Info } from 'lucide-react';
+import * as pdfjsLib from 'pdfjs-dist';
+
+// Configure PDF.js worker
+pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+
+const FIPDiagnosticChatbot = () => {
+  // All state declarations - removed API key related states
+  const [messages, setMessages] = useState([
+    {
+      role: 'assistant',
+      content: 'Hello! I\'m here to help assess your cat for potential FIP (Feline Infectious Peritonitis) based on established veterinary diagnostic protocols. I can analyze medical reports, X-rays, blood work, and symptoms.\n\nTo get started, please upload your cat\'s blood work (especially protein levels and A:G ratio) along with any other medical documents, X-rays, or describe symptoms.'
+    }
+  ]);
+  const [inputMessage, setInputMessage] = useState('');
+  const [uploadedFiles, setUploadedFiles] = useState([]);
+  const [isLoading, setIsLoading] = useState(false);
+  const [isProcessingPdf, setIsProcessingPdf] = useState(false);
+  const fileInputRef = useRef(null);
+
+  // FIP Knowledge Base - extracted from the provided documents
   const fipKnowledgeBase = {
-    overview: {
-      definition: "Feline Infectious Peritonitis (FIP) is a fatal, immune-mediated disease caused by pathotypes of feline coronavirus (FCoV). While benign enteric FCoV is ubiquitous, <5% of infected cats develop FIP after mutation and systemic dissemination.",
-      prevalence: "FCoV seropositivity 30-90% in multi-cat environments; endemic in shelters and breeding catteries",
-      incidence: "~0.35-5% of FCoV-infected cats develop FIP; risk highest in kittens (3-16 months)",
-      breedPredisposition: ["Abyssinian", "Bengal", "Birman", "Burmese", "Devon Rex", "Ragdoll", "Rex breeds"],
-      ageRisk: "75% of cases <2 years; juvenile and geriatric cats at heightened risk",
-      survivalWithoutTreatment: {
-        wet: "1-2 weeks",
-        dry: "2-4 weeks",
-        neurological: "1-3 weeks"
-      }
-    },
     types: {
       wet: "Usually beginning with high temperature, loss of appetite and lethargy, cats with Wet FIP have abdominal effusions usually accompanied with an enlarged abdominal cavity, basically the stomach appearing abnormally enlarged, rounded and bloated. Sometimes vomiting, diarrhea or jaundice are added.",
       pleural: "Showing similar symptoms of lethargy, high temperature and loss of appetite as Wet FIP, in Pleural FIP cats have thoracic (chest) effusions often accompanied with breathing problems (dyspnea). Sometimes this can be confused with pneumonia leading to delayed diagnosis.",
-      dry: "Often more difficult to diagnose, Dry FIP also tends to be more chronic, progressing over a few weeks to months. With no fluid accumulation, this form presents itself with some subtle symptoms like fatigue and gradual weight loss, later accompanied with additional signs depending on the organs affected. Can affect abdominal organs (liver, lymph nodes, kidney, pancreas, spleen, GI tract).",
-      ocular: "When the virus manages to reach the eyes it's called Ocular FIP. Uveitis can affect the eyes, making them look cloudy and changing the colour of the iris. Conjunctivitis and inflammation or bleeding in the anterior chamber are common too. Keratic precipitates, glaucoma, hyphema may occur.",
+      dry: "Often more difficult to diagnose, Dry FIP also tends to be more chronic, progressing over a few weeks to months. With no fluid accumulation, this form presents itself with some subtle symptoms like fatigue and gradual weight loss, later accompanied with additional signs depending on the organs affected.",
+      ocular: "When the virus manages to reach the eyes it's called Ocular FIP. Uveitis can affect the eyes, making them look cloudy and changing the colour of the iris. Conjunctivitis and inflammation or bleeding in the anterior chamber are common too.",
       neurological: "When the virus crosses the blood-brain barrier, inflammation can enter the brain and spinal cord and cause a spectrum of progressive neurologic abnormalities. Signs include ataxia (uncoordinated movements), head tilt, unsteady walk, floor or wall licking, postural reaction deficits, seizures, paralysis, personality changes and even dementia."
     },
     bloodworkIndicators: {
@@ -32,7 +41,7 @@
         gammaglobulins: "increased",
         ag: "reduced (<0.5)",
         bilirubin: "increased",
-        acutePhaseProteins: "increased (α1-acid glycoprotein >1.5 g/L; SAA >20 mg/L)"
+        acutePhaseProteins: "increased"
       },
       dryFIP: {
         hematocrit: "normal to reduced",
@@ -46,110 +55,606 @@
         gammaglobulins: "increased",
         ag: "reduced (<0.5)",
         bilirubin: "normal to elevated",
-        acutePhaseProteins: "increased (α1-acid glycoprotein >1.5 g/L; SAA >20 mg/L)"
-      },
-      criticalThresholds: {
-        agRatio: "<0.4 highly suggestive, <0.5 supportive",
-        globulin: "≥50 g/L supportive",
-        effusionProtein: ">3.5 g/dL typical",
-        serumLDHtoHL: ">0.9 supportive",
-        FCoVantibodyTiter: "≥1:1600 supportive"
+        acutePhaseProteins: "increased"
       }
     },
     diagnosticTools: {
-      ultrasound: "The presence of abdominal or thoracic fluid strongly supports a diagnosis of wet or pleural FIP. One of the earliest and most telling ultrasound signs is mesenteric lymphadenopathy (>1cm). Other useful findings include renal cortical nodules, hepatic and splenic changes, thickened intestinal walls with loss of layering, or peritoneal inflammation.",
-      pcr: "A positive PCR result, especially on effusion or FNA from a lymph node is highly specific for FIP (Ct <27 or viral load >10⁷ copies/mL highly confident). However, a negative result does not rule it out, especially in dry cases. Blood PCR is unreliable with false positives/negatives.",
-      rivalta: "A simple, in-house test that can support FIP diagnosis. While it helps differentiate protein-rich effusions, it is not FIP-specific and both false positives and negatives are possible. Positive Rivalta with typical clinical signs warrants proceeding to minimum database.",
-      imaging: "MRI is particularly useful in neuro FIP - findings may include meningeal enhancement, ventricular dilation, or brain edema. CT scans may reveal fluid accumulation, lymphadenopathy, or organ abnormalities not clearly visible on ultrasound. Advanced 3D CNN algorithms can detect <5mm renal granulomas with 89% accuracy.",
-      immunohistochemistry: "Gold standard - polyclonal anti-FCoV antibody staining in macrophages adjacent to vasculitis. Definitive when paired with pyogranulomatous lesions.",
-      immunocytochemistry: "Same antibodies on cytospin effusion/FNA smears; quicker than IHC. Sensitivity 82%, Specificity 95%.",
-      flowCytometry: "CD11b+/Iba1+ macrophages co-expressing FCoV spike detected via FITC-mAb. Research-grade but promising.",
-      serumProteinElectrophoresis: "Broad polyclonal gammopathy, increased β/γ bridge typical"
-    },
-    diagnosticAlgorithms: {
-      rapidTriage: [
-        "Signalment + History → kitten/young adult, multi-cat, stressor, vague fever",
-        "Quick look (≤15 min): temperature, mucous membranes, abdominal palpation (fluid wave test)",
-        "Point-of-care: Rivalta on any free fluid, handheld refractometer for TP, SNAP FCoV Ab if available",
-        "Decision: If Rivalta+, TP >3.5 g/dL and clinical signs typical → move to Minimum Database"
-      ],
-      effusiveFIP: [
-        "Effusion present → Rivalta test",
-        "If Positive → Effusion RT-qPCR for FCoV",
-        "Ct <27 or viral load >10⁷ copies/mL → Highly Confident FIP",
-        "Ct ≥27 → Proceed to ICC/IHC on cell block; consider tissue biopsy"
-      ],
-      nonEffusiveFIP: [
-        "Focused ultrasound → renal cortical nodules, splenomegaly, mesenteric LN >1cm",
-        "Fine-needle aspirate from two organs → cytology + RT-qPCR",
-        "If PCR equivocal: Tru-cut biopsy + histopathology + IHC for FCoV antigen"
-      ]
-    },
-    scoringSystems: {
-      modifiedFIPScore: {
-        formula: "Score = (A/G ≤0.4)*3 + (Globulin ≥50 g/L)*2 + (Age <2 yrs)*1 + (Effusion Rivalta +)*2 + (FCoV titre ≥1:1600)*2",
-        interpretation: "≥7 points → treat as FIP"
-      },
-      FIPCalc: "UC Davis web app integrating 19 variables; AUROC 0.94",
-      CRPSAACombo: "CRP >40 mg/L & SAA >30 mg/L with A/G <0.6 gives 90% PPV"
+      ultrasound: "The presence of abdominal or thoracic fluid strongly supports a diagnosis of wet or pleural FIP. One of the earliest and most telling ultrasound signs is mesenteric lymphadenopathy. Other useful findings include hepatic and splenic changes, thickened intestinal walls with loss of layering, or peritoneal inflammation.",
+      pcr: "A positive PCR result, especially on effusion or FNA from a lymph node- is highly specific for FIP. However, a negative result does not rule it out, especially in dry cases.",
+      rivalta: "A simple, in-house test that can support FIP diagnosis. While it helps differentiate protein-rich effusions, it is not FIP-specific and both false positives and negatives are possible.",
+      imaging: "MRI is particularly useful in neuro FIP - findings may include meningeal enhancement, ventricular dilation, or brain edema. CT scans may reveal fluid accumulation, lymphadenopathy, or organ abnormalities not clearly visible on ultrasound."
     },
     recommendedSamples: {
-      wet: "Effusion (no more than 30% of abdominal fluid removed at once)",
-      pleural: "Effusion (entire volume drained if dyspnea present)",
+      wet: "Effusion",
+      pleural: "Effusion",
       dry: "Fine needle aspirate of affected Mesenteric Lymph Nodes",
       ocular: "Aqueous humor",
-      neurological: "Cerebrospinal fluid (via CSF tap) - ↑protein >0.3 g/dL, neutrophilic pleocytosis, Ct <28 highly supportive"
-    },
-    sampleHandling: {
-      effusionPCR: { container: "EDTA (purple)", temperature: "4°C", maxTransit: "48h" },
-      tissueBiopsy: { container: "Formalin + separate fresh for PCR", temperature: "RT/4°C", maxTransit: "72h" },
-      CSF: { container: "Plain sterile tube", temperature: "Ice pack", maxTransit: "24h" },
-      aqueousHumor: { container: "Plain sterile", temperature: "Ice pack", maxTransit: "24h" }
-    },
-    differentialDiagnosis: {
-      lymphoma: { keyTests: "PARR clonality, FeLV status, ultrasonographic splenic pattern", overlaps: "Granulomas, effusion" },
-      toxoplasmosis: { keyTests: "IgM ≥1:64, PCR for T. gondii", overlaps: "Pyrexia, neuro-ocular signs" },
-      bacterialPeritonitis: { keyTests: "Effusion cytology (degenerate neutrophils, bacteria), culture", overlaps: "Septic effusion" },
-      chylothorax: { keyTests: "Effusion triglycerides >serum", overlaps: "Milky effusion" },
-      CHF: { keyTests: "NT-proBNP >270 pmol/L, echocardiography", overlaps: "Pleural effusion" }
-    },
-    treatmentProtocols: {
-      GS441524: {
-        description: "Most widely used antiviral, blocks viral replication. Parent compound of Remdesivir.",
-        standardDuration: "Minimum 84 days",
-        dosingInjectable: {
-          wet: "Minimum 8 mg/kg",
-          dry: "Minimum 8 mg/kg",
-          pleural: "Minimum 10 mg/kg",
-          ocular: "Minimum 10 mg/kg",
-          neurological: "Minimum 12 mg/kg (up to 40 mg/kg in complex cases)"
-        },
-        dosingOral: "Double the injectable dose due to ~50% bioavailability",
-        initialProtocol: "Strongly recommended to begin with injectable for first 2-4 weeks for faster stabilization",
-        responseTime: "Signs of improvement within 24-72 hours (fever resolves, appetite returns)"
-      },
-      remdesivir: {
-        description: "Prodrug that metabolizes to GS-441524, legally available in India",
-        dosingProtocol: {
-          wet: "Minimum 12-15 mg/kg",
-          dry: "Minimum 12-15 mg/kg",
-          pleural: "Minimum 15 mg/kg",
-          ocular: "Minimum 15-20 mg/kg",
-          neurological: "Minimum 20 mg/kg"
-        }
-      },
-      monitoring: {
-        baseline: "CBC, serum chemistry, UA, body weight",
-        duringTherapy: "Every 4 weeks: CBC, ALT/AST, albumin, globulin, A/G ratio",
-        imaging: "Repeat ultrasound at 6 weeks for effusion/organ lesions",
-        endOfTreatment: "Normal hematocrit, A/G ≥0.8, resolution of effusions/lesions, stable weight",
-        postTreatment: "Monthly checks ×3 months, then bi-annual for 1 year"
-      }
-    },
-    prognosis: {
-      earlyWetDry: { remissionRate: "85-95%", medianSurvival: ">12 months" },
-      ocular: { remissionRate: "75-85%", medianSurvival: "6-12 months" },
-      neurological: { remissionRate: "60-70%", medianSurvival: "4-8 months" },
-      delayedTreatment: { remissionRate: "<50%", medianSurvival: "<6 months" }
+      neurological: "Cerebrospinal fluid (via CSF tap)"
     }
   };
+
+  // Helper function to convert data URL to array buffer
+  const dataURLToArrayBuffer = (dataURL) => {
+    const base64 = dataURL.split(',')[1];
+    const binaryString = window.atob(base64);
+    const arrayBuffer = new ArrayBuffer(binaryString.length);
+    const uint8Array = new Uint8Array(arrayBuffer);
+    
+    for (let i = 0; i < binaryString.length; i++) {
+      uint8Array[i] = binaryString.charCodeAt(i);
+    }
+    
+    return arrayBuffer;
+  };
+
+  // PDF to Image conversion function
+  const convertPdfToImages = async (pdfFile) => {
+    try {
+      setIsProcessingPdf(true);
+      
+      const arrayBuffer = await pdfFile.arrayBuffer();
+      const pdf = await pdfjsLib.getDocument({ data: arrayBuffer }).promise;
+      
+      const images = [];
+      
+      for (let pageNum = 1; pageNum <= pdf.numPages; pageNum++) {
+        const page = await pdf.getPage(pageNum);
+        
+        // Create canvas for rendering
+        const canvas = document.createElement('canvas');
+        const context = canvas.getContext('2d');
+        
+        // Set high resolution for better text recognition
+        const scale = 2.0;
+        const viewport = page.getViewport({ scale });
+        
+        canvas.width = viewport.width;
+        canvas.height = viewport.height;
+        
+        // Render page to canvas
+        await page.render({
+          canvasContext: context,
+          viewport: viewport
+        }).promise;
+        
+        // Convert canvas to image data
+        const imageDataUrl = canvas.toDataURL('image/png', 0.9);
+        
+        // Create a file-like object for the converted image
+        const imageFile = {
+          name: `${pdfFile.name}_page_${pageNum}.png`,
+          type: 'image/png',
+          size: imageDataUrl.length * 0.75, // Approximate size
+          file: {
+            arrayBuffer: () => Promise.resolve(dataURLToArrayBuffer(imageDataUrl))
+          },
+          dataUrl: imageDataUrl
+        };
+        
+        images.push(imageFile);
+      }
+      
+      return images;
+    } catch (error) {
+      console.error('Error converting PDF to images:', error);
+      throw new Error(`Failed to convert PDF: ${error.message}`);
+    } finally {
+      setIsProcessingPdf(false);
+    }
+  };
+
+  const handleFileUpload = async (event) => {
+    const files = Array.from(event.target.files);
+    const processedFiles = [];
+    
+    for (const file of files) {
+      if (file.type === 'application/pdf') {
+        try {
+          // Convert PDF to images
+          const convertedImages = await convertPdfToImages(file);
+          processedFiles.push(...convertedImages);
+        } catch (error) {
+          console.error('PDF conversion error:', error);
+          // Add original PDF file with error note
+          processedFiles.push({
+            name: file.name,
+            type: file.type,
+            size: file.size,
+            file: file,
+            conversionError: error.message
+          });
+        }
+      } else {
+        // Regular file processing
+        processedFiles.push({
+          name: file.name,
+          type: file.type,
+          size: file.size,
+          file: file
+        });
+      }
+    }
+    
+    setUploadedFiles(prev => [...prev, ...processedFiles]);
+  };
+
+  const analyzeWithOpenAI = async (userInput, files = []) => {
+    try {
+      // Prepare the system message with knowledge base
+      const systemMessage = `You are a FIP (Feline Infectious Peritonitis) diagnostic assistant. You must base ALL responses EXCLUSIVELY on the following vetted knowledge base from FIP Warriors® India x FSGI Foundation and ABCD veterinary guidelines:
+
+FIP TYPES AND SYMPTOMS:
+${Object.entries(fipKnowledgeBase.types).map(([type, desc]) => `${type.toUpperCase()}: ${desc}`).join('\n\n')}
+
+BLOOD WORK INDICATORS:
+WET FIP: ${Object.entries(fipKnowledgeBase.bloodworkIndicators.wetFIP).map(([param, value]) => `${param}: ${value}`).join(', ')}
+DRY FIP: ${Object.entries(fipKnowledgeBase.bloodworkIndicators.dryFIP).map(([param, value]) => `${param}: ${value}`).join(', ')}
+
+DIAGNOSTIC TOOLS:
+${Object.entries(fipKnowledgeBase.diagnosticTools).map(([tool, desc]) => `${tool.toUpperCase()}: ${desc}`).join('\n\n')}
+
+CRITICAL DIAGNOSTIC PROTOCOL:
+- A:G ratio <0.5 is THE MOST IMPORTANT FIP indicator
+- Total protein, Globulins, Albumin are essential
+- NEVER confirm FIP without proper blood parameters
+- Use only "FIP should be considered" or "Strong clinical suspicion" without confirmatory tests
+- Always emphasize veterinary consultation
+
+ANALYSIS INSTRUCTIONS:
+- Focus on A:G ratio as primary indicator
+- Analyze images for FIP signs (fluid, lymphadenopathy, organ changes)
+- Always request missing critical blood parameters
+- Provide structured medical assessments
+- Maintain conversation context and refer to previously discussed information`;
+
+      // Convert the UI messages to API format for conversation history
+      const conversationMessages = [];
+      
+      // Add system message first
+      conversationMessages.push({
+        role: "system",
+        content: systemMessage
+      });
+
+      // Convert previous messages to API format (excluding the initial assistant greeting)
+      for (let i = 1; i < messages.length; i++) {
+        const msg = messages[i];
+        if (msg.role === 'user') {
+          // For user messages, convert to simple text format
+          let content = msg.content;
+          if (msg.files && msg.files.length > 0) {
+            content += `\n\nFiles uploaded: ${msg.files.map(f => f.name).join(', ')}`;
+          }
+          conversationMessages.push({
+            role: "user",
+            content: content
+          });
+        } else if (msg.role === 'assistant') {
+          conversationMessages.push({
+            role: "assistant",
+            content: msg.content
+          });
+        }
+      }
+
+      // Prepare current user message content
+      let userMessageContent = [];
+      
+      // Add text content
+      let textContent = "";
+      
+      if (userInput) {
+        textContent += `Patient Information: ${userInput}\n\n`;
+      }
+      
+      // Handle uploaded files
+      const imageFiles = files.filter(f => f.type.startsWith('image/'));
+      const pdfFiles = files.filter(f => f.type === 'application/pdf');
+      
+      if (imageFiles.length > 0) {
+        textContent += `${imageFiles.length} medical image(s) uploaded for analysis. Please examine for FIP indicators.\n\n`;
+        
+        // Process images for OpenAI (including converted PDF pages)
+        for (const file of imageFiles) {
+          try {
+            let base64Data;
+            
+            // Check if this is a converted PDF image
+            if (file.dataUrl) {
+              base64Data = file.dataUrl.split(",")[1];
+            } else {
+              // Regular image file
+              base64Data = await new Promise((resolve, reject) => {
+                const reader = new FileReader();
+                reader.onload = () => {
+                  const base64 = reader.result.split(",")[1];
+                  resolve(base64);
+                };
+                reader.onerror = reject;
+                reader.readAsDataURL(file.file);
+              });
+            }
+
+            userMessageContent.push({
+              type: "image_url",
+              image_url: {
+                url: `data:image/png;base64,${base64Data}`,
+                detail: "high"
+              }
+            });
+          } catch (error) {
+            console.error("Error processing image:", error);
+            textContent += `Error processing image: ${file.name}\n`;
+          }
+        }
+      }
+      
+      if (pdfFiles.length > 0) {
+        const pdfErrors = pdfFiles.filter(f => f.conversionError);
+        if (pdfErrors.length > 0) {
+          textContent += `${pdfErrors.length} PDF document(s) could not be converted to images. Please describe their contents or try uploading screenshots.\n\n`;
+        }
+      }
+
+      // Only add the assessment instructions for the first user message
+      if (conversationMessages.length === 1) {
+        textContent += `Please provide a comprehensive FIP assessment:
+
+1. **Critical Blood Parameters**: Check for A:G ratio, total protein, globulins
+2. **Image Analysis** (if provided): Identify any FIP-related findings
+3. **Clinical Assessment**: Match symptoms to FIP types from knowledge base  
+4. **Diagnostic Recommendations**: Next steps based on available data
+5. **Veterinary Emphasis**: Stress professional consultation
+
+Remember: A:G ratio <0.5 is the primary FIP indicator. Never confirm FIP without proper blood work.`;
+      }
+
+      // Add text to user message content
+      userMessageContent.push({
+        type: "text",
+        text: textContent
+      });
+
+      // Add current user message to conversation
+      conversationMessages.push({
+        role: "user",
+        content: userMessageContent
+      });
+
+      console.log("Calling backend API with conversation history...");
+
+      // Call your Netlify function with full conversation history
+      const apiEndpoint = '/.netlify/functions/openai';
+
+      const response = await fetch(apiEndpoint, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          messages: conversationMessages,
+          model: "gpt-4o-mini" // Using mini model for cost efficiency
+        })
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        console.error("Backend API Error:", errorData);
+        
+        if (response.status === 401) {
+          return "❌ **Authentication Error**: Server API key configuration issue. Please contact the administrator.";
+        } else if (response.status === 429) {
+          return "⏳ **Rate Limit**: Too many requests. Please wait a moment and try again.";
+        } else if (response.status === 402) {
+          return "💳 **Billing Issue**: Insufficient credits. Please contact the administrator to check OpenAI account billing.";
+        } else if (response.status === 500 && errorData.error?.includes('API key not configured')) {
+          return "⚙️ **Configuration Error**: Server API key not configured. Please contact the administrator.";
+        } else {
+          return `❌ **API Error** (${response.status}): ${errorData.error || 'Unknown error'}`;
+        }
+      }
+
+      const data = await response.json();
+      
+      if (!data.choices || !data.choices[0] || !data.choices[0].message) {
+        throw new Error("Invalid response format from API");
+      }
+
+      return data.choices[0].message.content;
+
+    } catch (error) {
+      console.error("Error in analyzeWithOpenAI:", error);
+      
+      if (error.message.includes('fetch')) {
+        return `❌ **Connection Error**: Cannot connect to Netlify function. 
+
+**If you're running locally**: 
+- Make sure you're using \`netlify dev\` to run the development server
+- The function should be available at \`/.netlify/functions/openai\`
+- Check that OPENAI_API_KEY is set in your .env file
+
+**If deployed**: 
+- Check that your Netlify function deployed successfully
+- Verify OPENAI_API_KEY environment variable is set in Netlify dashboard
+- View function logs in Netlify dashboard
+
+**Environment Variable Setup**: Add OPENAI_API_KEY=your_key_here to your environment`;
+      }
+      
+      return `❌ **Error**: ${error.message}`;
+    }
+  };
+
+  const handleSendMessage = async () => {
+    if (!inputMessage.trim() && uploadedFiles.length === 0) return;
+
+    const userMessage = {
+      role: 'user',
+      content: inputMessage || 'I have uploaded files for analysis.',
+      files: uploadedFiles
+    };
+
+    setMessages(prev => [...prev, userMessage]);
+    setIsLoading(true);
+    setInputMessage('');
+    setUploadedFiles([]);
+
+    try {
+      const response = await analyzeWithOpenAI(inputMessage, uploadedFiles);
+      
+      setMessages(prev => [...prev, {
+        role: 'assistant',
+        content: response
+      }]);
+    } catch (error) {
+      setMessages(prev => [...prev, {
+        role: 'assistant',
+        content: 'I apologize, but I encountered an error while processing your request. Please try again or consult with your veterinarian.'
+      }]);
+    }
+
+    setIsLoading(false);
+  };
+
+  const handleKeyPress = (e) => {
+    if (e.key === 'Enter' && !e.shiftKey) {
+      e.preventDefault();
+      handleSendMessage();
+    }
+  };
+
+  return (
+    <div className="min-h-screen bg-gradient-to-br from-blue-50 via-indigo-50 to-purple-50">
+      <div className="max-w-6xl mx-auto p-4">
+        {/* Header */}
+        <div className="bg-white rounded-2xl shadow-xl overflow-hidden mb-6">
+          <div className="bg-gradient-to-r from-blue-600 to-indigo-700 text-white p-8">
+            <div className="flex items-center gap-4">
+              <div className="bg-white bg-opacity-20 p-3 rounded-full">
+                <Stethoscope className="w-10 h-10" />
+              </div>
+              <div>
+                <h1 className="text-3xl font-bold mb-2">FIP Diagnostic Assistant</h1>
+                <p className="text-blue-100 text-lg">Evidence-based FIP assessment using vetted veterinary protocols</p>
+              </div>
+            </div>
+          </div>
+
+          {/* Status Indicator */}
+          <div className="p-4 bg-green-50 border-b border-green-200">
+            <div className="flex items-center gap-2">
+              <CheckCircle className="w-4 h-4 text-green-600" />
+              <span className="text-sm font-medium text-green-800">Ready for Analysis</span>
+            </div>
+            <p className="text-xs text-green-700 mt-1">
+              API key configured via environment variable. Upload medical documents to begin analysis.
+            </p>
+          </div>
+
+          {/* Key Information Cards */}
+          <div className="p-6 bg-gradient-to-r from-blue-50 to-indigo-50">
+            <div className="grid md:grid-cols-3 gap-4 mb-6">
+              <div className="bg-white rounded-xl p-4 border-l-4 border-red-500 shadow-sm">
+                <div className="flex items-center gap-3 mb-2">
+                  <AlertTriangle className="w-5 h-5 text-red-500" />
+                  <h3 className="font-semibold text-gray-800">Critical Parameter</h3>
+                </div>
+                <p className="text-sm text-gray-600">A:G ratio &lt;0.5 is the most important FIP indicator</p>
+              </div>
+              
+              <div className="bg-white rounded-xl p-4 border-l-4 border-amber-500 shadow-sm">
+                <div className="flex items-center gap-3 mb-2">
+                  <CheckCircle className="w-5 h-5 text-amber-500" />
+                  <h3 className="font-semibold text-gray-800">Essential Values</h3>
+                </div>
+                <p className="text-sm text-gray-600">Total protein, Globulins, Albumin required</p>
+              </div>
+              
+              <div className="bg-white rounded-xl p-4 border-l-4 border-green-500 shadow-sm">
+                <div className="flex items-center gap-3 mb-2">
+                  <Info className="w-5 h-5 text-green-500" />
+                  <h3 className="font-semibold text-gray-800">PDF Support</h3>
+                </div>
+                <p className="text-sm text-gray-600">PDFs auto-converted to images for analysis</p>
+              </div>
+            </div>
+
+            {/* Disclaimer */}
+            <div className="bg-amber-50 border border-amber-200 rounded-xl p-4">
+              <div className="flex items-start gap-3">
+                <Info className="w-5 h-5 text-amber-600 mt-0.5 flex-shrink-0" />
+                <div>
+                  <h4 className="font-semibold text-amber-800 mb-1">Medical Disclaimer</h4>
+                  <p className="text-sm text-amber-700">
+                    This tool provides educational information only and follows strict diagnostic protocols. 
+                    Always consult a qualified veterinarian for proper diagnosis and treatment.
+                  </p>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Chat Interface */}
+        <div className="bg-white rounded-2xl shadow-xl overflow-hidden">
+          {/* Chat Messages */}
+          <div className="h-96 overflow-y-auto p-6 space-y-6 bg-gray-50">
+            {messages.map((message, index) => (
+              <div key={index} className={`flex ${message.role === 'user' ? 'justify-end' : 'justify-start'}`}>
+                <div className={`max-w-4xl rounded-2xl p-5 ${
+                  message.role === 'user' 
+                    ? 'bg-gradient-to-r from-blue-500 to-indigo-600 text-white shadow-lg' 
+                    : 'bg-white border border-gray-200 shadow-sm'
+                }`}>
+                  <div className="flex items-start gap-3">
+                    {message.role === 'assistant' && (
+                      <div className="bg-blue-100 p-2 rounded-full flex-shrink-0">
+                        <MessageCircle className="w-4 h-4 text-blue-600" />
+                      </div>
+                    )}
+                    <div className="flex-1">
+                      <p className="whitespace-pre-wrap leading-relaxed">{message.content}</p>
+                      {message.files && message.files.length > 0 && (
+                        <div className="mt-4 space-y-2">
+                          {message.files.map((file, fileIndex) => (
+                            <div key={fileIndex} className={`flex items-center gap-3 p-3 rounded-lg ${
+                              message.role === 'user' ? 'bg-white bg-opacity-20' : 'bg-gray-50'
+                            }`}>
+                              {file.type.startsWith('image/') ? 
+                                <Image className="w-4 h-4" /> : 
+                                <FileText className="w-4 h-4" />
+                              }
+                              <span className="text-sm font-medium">{file.name}</span>
+                              <span className="text-xs opacity-75">
+                                {(file.size / 1024).toFixed(1)} KB
+                              </span>
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              </div>
+            ))}
+            
+            {isLoading && (
+              <div className="flex justify-start">
+                <div className="bg-white border border-gray-200 shadow-sm rounded-2xl p-5">
+                  <div className="flex items-center gap-3">
+                    <div className="bg-blue-100 p-2 rounded-full">
+                      <MessageCircle className="w-4 h-4 text-blue-600" />
+                    </div>
+                    <div className="flex space-x-2">
+                      <div className="w-2 h-2 bg-blue-500 rounded-full animate-bounce"></div>
+                      <div className="w-2 h-2 bg-blue-500 rounded-full animate-bounce" style={{animationDelay: '0.1s'}}></div>
+                      <div className="w-2 h-2 bg-blue-500 rounded-full animate-bounce" style={{animationDelay: '0.2s'}}></div>
+                    </div>
+                    <span className="text-sm text-gray-500">Analyzing...</span>
+                  </div>
+                </div>
+              </div>
+            )}
+          </div>
+
+          {/* Input Area */}
+          <div className="border-t bg-white p-6">
+            {uploadedFiles.length > 0 && (
+              <div className="mb-4 p-4 bg-blue-50 rounded-xl border border-blue-200">
+                <div className="flex items-center gap-2 mb-3">
+                  <Upload className="w-4 h-4 text-blue-600" />
+                  <p className="text-sm font-semibold text-blue-800">Files ready for analysis:</p>
+                </div>
+                <div className="space-y-2">
+                  {uploadedFiles.map((file, index) => (
+                    <div key={index} className="flex items-center justify-between bg-white p-3 rounded-lg shadow-sm">
+                      <div className="flex items-center gap-3">
+                        {file.type.startsWith('image/') ? 
+                          <Image className="w-4 h-4 text-gray-500" /> : 
+                          <FileText className="w-4 h-4 text-gray-500" />
+                        }
+                        <div>
+                          <span className="text-sm font-medium text-gray-700">{file.name}</span>
+                          {file.conversionError && (
+                            <p className="text-xs text-red-600">Conversion failed: {file.conversionError}</p>
+                          )}
+                          {file.name.includes('_page_') && (
+                            <p className="text-xs text-green-600">✓ Converted from PDF</p>
+                          )}
+                        </div>
+                        <span className="text-xs text-gray-500">
+                          {(file.size / 1024).toFixed(1)} KB
+                        </span>
+                      </div>
+                      <button
+                        onClick={() => setUploadedFiles(prev => prev.filter((_, i) => i !== index))}
+                        className="text-red-500 hover:text-red-700 hover:bg-red-50 p-1 rounded transition-colors"
+                      >
+                        ×
+                      </button>
+                    </div>
+                  ))}
+                </div>
+                {isProcessingPdf && (
+                  <div className="mt-3 p-3 bg-yellow-50 rounded-lg border border-yellow-200">
+                    <div className="flex items-center gap-2">
+                      <div className="w-4 h-4 border-2 border-yellow-600 border-t-transparent rounded-full animate-spin"></div>
+                      <span className="text-sm text-yellow-800">Converting PDF to images...</span>
+                    </div>
+                  </div>
+                )}
+              </div>
+            )}
+            
+            <div className="space-y-4">
+              <input
+                ref={fileInputRef}
+                type="file"
+                multiple
+                accept=".pdf,.jpg,.jpeg,.png,.txt,.doc,.docx"
+                onChange={handleFileUpload}
+                className="hidden"
+              />
+              
+              {/* Upload button - full width on mobile */}
+              <button
+                onClick={() => fileInputRef.current?.click()}
+                className="w-full sm:w-auto flex items-center justify-center gap-2 px-6 py-3 bg-gradient-to-r from-gray-100 to-gray-200 text-gray-700 rounded-xl hover:from-gray-200 hover:to-gray-300 transition-all duration-200 shadow-sm font-medium"
+              >
+                <Upload className="w-4 h-4" />
+                Upload Files
+              </button>
+              
+              {/* Input area - stack on mobile, flex on desktop */}
+              <div className="flex flex-col sm:flex-row gap-3">
+                <textarea
+                  value={inputMessage}
+                  onChange={(e) => setInputMessage(e.target.value)}
+                  onKeyPress={handleKeyPress}
+                  placeholder="Describe your cat's symptoms, age, and any concerns..."
+                  className="flex-1 p-4 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent resize-none shadow-sm min-h-[100px]"
+                  rows="3"
+                />
+                
+                <button
+                  onClick={handleSendMessage}
+                  disabled={isLoading || isProcessingPdf || (!inputMessage.trim() && uploadedFiles.length === 0)}
+                  className="w-full sm:w-auto px-6 py-3 bg-gradient-to-r from-blue-500 to-indigo-600 text-white rounded-xl hover:from-blue-600 hover:to-indigo-700 disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200 shadow-lg font-medium flex items-center justify-center gap-2"
+                >
+                  <Send className="w-5 h-5" />
+                  <span className="sm:hidden">Send Message</span>
+                </button>
+              </div>
+            </div>
+            
+            <p className="text-xs text-gray-500 mt-3 text-center">
+              Upload X-rays, blood reports, ultrasound images, or medical documents • Supported: PDF, JPG, PNG, DOC, TXT
+            </p>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+export default FIPDiagnosticChatbot;
