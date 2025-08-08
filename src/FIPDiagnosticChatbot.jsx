@@ -21,57 +21,221 @@ const FIPDiagnosticChatbot = () => {
 
   // FIP Knowledge Base - extracted from the provided documents
   const fipKnowledgeBase = {
-    types: {
-      wet: "Usually beginning with high temperature, loss of appetite and lethargy, cats with Wet FIP have abdominal effusions usually accompanied with an enlarged abdominal cavity, basically the stomach appearing abnormally enlarged, rounded and bloated. Sometimes vomiting, diarrhea or jaundice are added.",
-      pleural: "Showing similar symptoms of lethargy, high temperature and loss of appetite as Wet FIP, in Pleural FIP cats have thoracic (chest) effusions often accompanied with breathing problems (dyspnea). Sometimes this can be confused with pneumonia leading to delayed diagnosis.",
-      dry: "Often more difficult to diagnose, Dry FIP also tends to be more chronic, progressing over a few weeks to months. With no fluid accumulation, this form presents itself with some subtle symptoms like fatigue and gradual weight loss, later accompanied with additional signs depending on the organs affected.",
-      ocular: "When the virus manages to reach the eyes it's called Ocular FIP. Uveitis can affect the eyes, making them look cloudy and changing the colour of the iris. Conjunctivitis and inflammation or bleeding in the anterior chamber are common too.",
-      neurological: "When the virus crosses the blood-brain barrier, inflammation can enter the brain and spinal cord and cause a spectrum of progressive neurologic abnormalities. Signs include ataxia (uncoordinated movements), head tilt, unsteady walk, floor or wall licking, postural reaction deficits, seizures, paralysis, personality changes and even dementia."
+  types: {
+    wet: "Usually beginning with high temperature, loss of appetite and lethargy, cats with Wet FIP have abdominal effusions usually accompanied with an enlarged abdominal cavity, basically the stomach appearing abnormally enlarged, rounded and bloated. Sometimes vomiting, diarrhea or jaundice are added. Median survival without treatment: 1-2 weeks.",
+    pleural: "Showing similar symptoms of lethargy, high temperature and loss of appetite as Wet FIP, in Pleural FIP cats have thoracic (chest) effusions often accompanied with breathing problems (dyspnea). Sometimes this can be confused with pneumonia leading to delayed diagnosis. Median survival without treatment: 1-2 weeks.",
+    dry: "Often more difficult to diagnose, Dry FIP also tends to be more chronic, progressing over a few weeks to months. With no fluid accumulation, this form presents itself with some subtle symptoms like fatigue and gradual weight loss, later accompanied with additional signs depending on the organs affected. Median survival without treatment: 2-4 weeks.",
+    ocular: "When the virus manages to reach the eyes it's called Ocular FIP. Uveitis can affect the eyes, making them look cloudy and changing the colour of the iris. Conjunctivitis and inflammation or bleeding in the anterior chamber are common too. Signs include anterior uveitis, keratic precipitates, glaucoma, hyphema, chorioretinitis.",
+    neurological: "When the virus crosses the blood-brain barrier, inflammation can enter the brain and spinal cord and cause a spectrum of progressive neurologic abnormalities. Signs include ataxia (uncoordinated movements), head tilt, unsteady walk, floor or wall licking, postural reaction deficits, seizures, paralysis, personality changes and even dementia. Median survival without treatment: 1-3 weeks."
+  },
+  
+  epidemiology: {
+    globalPrevalence: "FCoV seropositivity 30-90% in multi-cat environments; endemic in shelters and breeding catteries",
+    incidenceOfFIP: "~0.35-5% of FCoV-infected cats develop FIP; risk highest in kittens (3-16 months)",
+    ageDistribution: "75% of cases <2 years; juvenile and geriatric cats at heightened risk",
+    breedPredisposition: ["Abyssinian", "Bengal", "Birman", "Burmese", "Devon Rex", "Ragdoll", "Rex breeds"],
+    environmentalStressors: ["overcrowding", "introduction of new cats", "immunosuppression", "pregnancy"]
+  },
+  
+  bloodworkIndicators: {
+    wetFIP: {
+      hematocrit: "reduced",
+      reticulocyte: "normal to reduced",
+      neutrophils: "increased",
+      lymphocytes: "reduced",
+      mcv: "reduced",
+      totalProtein: "normal to elevated",
+      albumin: "normal to reduced",
+      globulins: "increased",
+      gammaglobulins: "increased",
+      agRatio: "reduced (<0.5)",
+      bilirubin: "increased",
+      acutePhaseProteins: "increased (α1-acid glycoprotein >1.5 g/L; SAA >20 mg/L)"
     },
-    bloodworkIndicators: {
-      wetFIP: {
-        hematocrit: "reduced",
-        reticulocyte: "normal to reduced",
-        neutrophils: "increased",
-        lymphocytes: "reduced",
-        mcv: "reduced",
-        totalProtein: "normal to elevated",
-        albumin: "normal to reduced",
-        globulins: "increased",
-        gammaglobulins: "increased",
-        ag: "reduced (<0.5)",
-        bilirubin: "increased",
-        acutePhaseProteins: "increased"
-      },
-      dryFIP: {
-        hematocrit: "normal to reduced",
-        reticulocyte: "normal to reduced",
-        neutrophils: "increased",
-        lymphocytes: "normal to reduced",
-        mcv: "reduced",
-        totalProtein: "normal to elevated",
-        albumin: "normal to reduced",
-        globulins: "increased",
-        gammaglobulins: "increased",
-        ag: "reduced (<0.5)",
-        bilirubin: "normal to elevated",
-        acutePhaseProteins: "increased"
-      }
-    },
-    diagnosticTools: {
-      ultrasound: "The presence of abdominal or thoracic fluid strongly supports a diagnosis of wet or pleural FIP. One of the earliest and most telling ultrasound signs is mesenteric lymphadenopathy. Other useful findings include hepatic and splenic changes, thickened intestinal walls with loss of layering, or peritoneal inflammation.",
-      pcr: "A positive PCR result, especially on effusion or FNA from a lymph node- is highly specific for FIP. However, a negative result does not rule it out, especially in dry cases.",
-      rivalta: "A simple, in-house test that can support FIP diagnosis. While it helps differentiate protein-rich effusions, it is not FIP-specific and both false positives and negatives are possible.",
-      imaging: "MRI is particularly useful in neuro FIP - findings may include meningeal enhancement, ventricular dilation, or brain edema. CT scans may reveal fluid accumulation, lymphadenopathy, or organ abnormalities not clearly visible on ultrasound."
-    },
-    recommendedSamples: {
-      wet: "Effusion",
-      pleural: "Effusion",
-      dry: "Fine needle aspirate of affected Mesenteric Lymph Nodes",
-      ocular: "Aqueous humor",
-      neurological: "Cerebrospinal fluid (via CSF tap)"
+    dryFIP: {
+      hematocrit: "normal to reduced",
+      reticulocyte: "normal to reduced",
+      neutrophils: "increased",
+      lymphocytes: "normal to reduced",
+      mcv: "reduced",
+      totalProtein: "normal to elevated",
+      albumin: "normal to reduced",
+      globulins: "increased",
+      gammaglobulins: "increased",
+      agRatio: "reduced (<0.5)",
+      bilirubin: "normal to elevated",
+      acutePhaseProteins: "increased (α1-acid glycoprotein >1.5 g/L; SAA >20 mg/L)"
     }
-  };
+  },
+  
+  diagnosticCriteria: {
+    primaryIndicators: {
+      agRatio: "A:G ratio <0.5 is THE MOST IMPORTANT FIP indicator - critical threshold is <0.4 for high confidence",
+      totalProtein: "Essential parameter - typically elevated in effusive forms",
+      globulins: "Hyperglobulinemia (>50 g/L) is a key marker",
+      albumin: "Hypoalbuminemia common, contributing to low A:G ratio"
+    },
+    effusionCharacteristics: {
+      appearance: "Straw-gold, viscous, high protein content",
+      totalProtein: ">3.5 g/dL in effusion",
+      cellCount: "Low TNCC (<5 × 10³/µL)",
+      rivaltaTest: "Positive result strongly supportive but not FIP-specific"
+    },
+    supportiveTests: {
+      fcovAntibodyTiter: ">1:1600 supports systemic FCoV",
+      serumProteinElectrophoresis: "Broad polyclonal gammopathy, increased β/γ bridge",
+      ldh_hlRatio: ">0.9 if lab offers",
+      crp_saaCombo: "CRP >40 mg/L & SAA >30 mg/L with A/G <0.6 gives 90% PPV"
+    }
+  },
+  
+  diagnosticTools: {
+    ultrasound: "The presence of abdominal or thoracic fluid strongly supports a diagnosis of wet or pleural FIP. One of the earliest and most telling ultrasound signs is mesenteric lymphadenopathy (>1 cm). Other useful findings include renal cortical nodules, hepatic and splenic changes, thickened intestinal walls with loss of layering, splenomegaly, or peritoneal inflammation.",
+    pcr: "A positive PCR result, especially on effusion or FNA from a lymph node, is highly specific for FIP. Ct <27 or viral load >10⁷ copies/mL on effusion is highly confident for FIP. However, a negative result does not rule it out, especially in dry cases. PCR on blood samples is unreliable.",
+    rivalta: "A simple, in-house test that can support FIP diagnosis. While it helps differentiate protein-rich effusions, it is not FIP-specific and both false positives and negatives are possible. Positive result moves to further testing.",
+    mri: "Particularly useful in neuro FIP - findings may include meningeal enhancement, ventricular dilation, or brain edema. These findings strengthen the case when combined with clinical history.",
+    ct: "CT scans may reveal fluid accumulation, lymphadenopathy, or organ abnormalities not clearly visible on ultrasound.",
+    immunohistochemistry: "Gold standard when paired with histopathology showing pyogranulomatous vasculitis. Polyclonal anti-FCoV antibody staining in macrophages adjacent to vasculitis is definitive.",
+    immunocytochemistry: "Same antibodies on cytospin effusion/FNA smears; quicker than IHC. Sensitivity 82%, Specificity 95%.",
+    csfAnalysis: "For neurological cases - increased protein >0.3 g/dL, neutrophilic pleocytosis, CSF RT-qPCR with Ct <28 highly supportive"
+  },
+  
+  recommendedSamples: {
+    wet: "Effusion (abdominocentesis)",
+    pleural: "Effusion (thoracocentesis)",
+    dry: "Fine needle aspirate of affected Mesenteric Lymph Nodes",
+    ocular: "Aqueous humor",
+    neurological: "Cerebrospinal fluid (via CSF tap)"
+  },
+  
+  scoringSystems: {
+    fipScore: {
+      description: "Modified FIP-Score (SockFIP 2023)",
+      calculation: "Score = (A/G ≤0.4)*3 + (Globulin ≥50 g/L)*2 + (Age <2 yrs)*1 + (Effusion Rivalta +)*2 + (FCoV titre ≥1:1600)*2",
+      interpretation: "≥7 points → treat as FIP"
+    },
+    fipCalc: {
+      description: "UC Davis web app integrating 19 variables",
+      performance: "AUROC 0.94"
+    }
+  },
+  
+  differentialDiagnosis: {
+    lymphoma: {
+      distinguishingTests: "PARR clonality, FeLV status, ultrasonographic splenic pattern",
+      overlaps: "Granulomas, effusion"
+    },
+    toxoplasmosis: {
+      distinguishingTests: "IgM ≥1:64, PCR for T. gondii",
+      overlaps: "Pyrexia, neuro-ocular signs"
+    },
+    bacterialPeritonitis: {
+      distinguishingTests: "Effusion cytology (degenerate neutrophils, bacteria), culture",
+      overlaps: "Septic effusion"
+    },
+    chylothorax: {
+      distinguishingTests: "Effusion triglycerides >serum",
+      overlaps: "Milky effusion"
+    },
+    chf: {
+      distinguishingTests: "NT-proBNP >270 pmol/L, echocardiography",
+      overlaps: "Pleural effusion"
+    }
+  },
+  
+  treatmentProtocols: {
+    gs441524: {
+      injectable: {
+        wet: "Minimum 8 mg/kg daily",
+        dry: "Minimum 8 mg/kg daily",
+        pleural: "Minimum 10 mg/kg daily",
+        ocular: "Minimum 10 mg/kg daily",
+        neurological: "Minimum 12 mg/kg daily (up to 40 mg/kg in complex cases)"
+      },
+      oral: {
+        note: "Double the injectable dose due to ~50% bioavailability",
+        wet: "Minimum 16 mg/kg daily",
+        dry: "Minimum 16 mg/kg daily",
+        pleural: "Minimum 20 mg/kg daily",
+        ocular: "Minimum 20 mg/kg daily",
+        neurological: "Minimum 24 mg/kg daily"
+      },
+      duration: "Minimum 84 days",
+      recommendations: "Start with injectable for 2-4 weeks for better stabilization, especially in critical/ocular/neurological cases"
+    },
+    remdesivir: {
+      wet: "Minimum 12 mg/kg, ideally 15 mg/kg daily",
+      dry: "Minimum 12 mg/kg, ideally 15 mg/kg daily",
+      pleural: "Minimum 15 mg/kg daily",
+      ocular: "Minimum 15 mg/kg, ideally 20 mg/kg daily",
+      neurological: "Minimum 20 mg/kg daily",
+      duration: "Minimum 84 days",
+      notes: "Legally available in India as human drug, can be prescribed off-label"
+    },
+    eidd: {
+      dosing: "10-15 mg/kg twice daily",
+      duration: "Minimum 84 days",
+      indications: ["Non-response to GS", "Relapse cases", "Combination therapy"],
+      warnings: "Mutagenic properties - avoid in kittens and pregnant cats"
+    }
+  },
+  
+  monitoring: {
+    baseline: ["CBC", "Serum chemistry", "Urinalysis", "Body weight"],
+    duringTherapy: {
+      frequency: "Every 4 weeks",
+      tests: ["CBC", "ALT/AST", "Albumin", "Globulin", "A/G ratio"]
+    },
+    imaging: "Repeat ultrasound at 6 weeks for effusion/organ lesions",
+    endOfTreatmentCriteria: [
+      "Normal hematocrit",
+      "A/G ratio ≥0.8",
+      "Resolution of effusions/lesions",
+      "Stable weight"
+    ],
+    postTreatment: "Monthly checks for 3 months, then bi-annual for 1 year",
+    observationPeriod: "84 days post-treatment without antivirals"
+  },
+  
+  prognosisOutcomes: {
+    earlyWetDry: { remissionRate: "85-95%", medianSurvival: ">12 months" },
+    ocularInvolvement: { remissionRate: "75-85%", medianSurvival: "6-12 months" },
+    neurologicalInvolvement: { remissionRate: "60-70%", medianSurvival: "4-8 months" },
+    delayedTreatment: { remissionRate: "<50%", medianSurvival: "<6 months" }
+  },
+  
+  supportiveCare: {
+    antiemetics: "Ondansetron, Maropitant for nausea",
+    appetiteStimulants: "Mirtazapine 1.5 mg/cat PO q48h, Practin",
+    hepatoprotectants: "SAMe, Silymarin based on bloodwork",
+    fluids: "Subcutaneous fluids for dehydration",
+    probiotics: "For gut health, especially with diarrhea",
+    vitaminB12: "For chronic GI issues or anemia",
+    anticonvulsants: "Levetiracetam 20 mg/kg for seizures in neuro FIP",
+    nutritionGoals: "200-250 kcal/day during treatment"
+  },
+  
+  contraindicatedMedications: {
+    lysine: "NEVER give - antagonistic to arginine, interferes with GS-441524",
+    fluoroquinolones: ["Baytril", "Enrofloxacin", "Zeniquin", "Marbofloxacin", "Pradofloxacin", "Orbifloxacin"],
+    cephalosporins: ["Convenia"],
+    note: "Avoid these especially in neurological FIP cases"
+  },
+  
+  emergencySigns: [
+    "Labored breathing",
+    "Collapse or going limp",
+    "Seizures",
+    "Severe dehydration",
+    "Not eating for >2 days",
+    "Pale or white gums",
+    "Jaundice",
+    "High fever unresponsive to medication",
+    "Failure to urinate >24 hours",
+    "Hypothermia (<97°F)",
+    "Signs of cerebral edema (fixed pupils, sudden collapse)"
+  ]
+};
 
   // Helper function to convert data URL to array buffer
   const dataURLToArrayBuffer = (dataURL) => {
