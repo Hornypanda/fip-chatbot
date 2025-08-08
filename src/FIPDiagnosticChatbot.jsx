@@ -1,16 +1,30 @@
 import React, { useState, useRef } from 'react';
-import { Upload, Send, FileText, Image, MessageCircle, AlertTriangle, Stethoscope, CheckCircle, Info } from 'lucide-react';
+import { Upload, Send, FileText, Image, MessageCircle, AlertTriangle, Stethoscope, CheckCircle, Info, BookOpen, Activity } from 'lucide-react';
 import * as pdfjsLib from 'pdfjs-dist';
 
 // Configure PDF.js worker
 pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
 
 const FIPDiagnosticChatbot = () => {
-  // All state declarations - removed API key related states
+  // All state declarations
   const [messages, setMessages] = useState([
     {
       role: 'assistant',
-      content: 'Hello! I\'m here to help assess your cat for potential FIP (Feline Infectious Peritonitis) based on established veterinary diagnostic protocols. I can analyze medical reports, X-rays, blood work, and symptoms.\n\nTo get started, please upload your cat\'s blood work (especially protein levels and A:G ratio) along with any other medical documents, X-rays, or describe symptoms.'
+      content: `Welcome! I'm an advanced FIP Diagnostic & Treatment Assistant with comprehensive veterinary knowledge from:
+• ABCD Europe Guidelines (2024)
+• UC Davis CCAH Protocols
+• FIP Warriors® India x FSGI Foundation Treatment Guide
+• Latest peer-reviewed research through 2025
+
+I can help with:
+✓ FIP diagnosis using evidence-based algorithms
+✓ Blood work interpretation (A:G ratio, proteins, CBC)
+✓ Treatment protocols (GS-441524, Remdesivir, combination therapy)
+✓ Dosing calculations for all FIP types
+✓ Monitoring schedules and relapse management
+✓ Emergency signs recognition
+
+Please upload your cat's medical documents or describe their symptoms to begin assessment.`
     }
   ]);
   const [inputMessage, setInputMessage] = useState('');
@@ -19,57 +33,336 @@ const FIPDiagnosticChatbot = () => {
   const [isProcessingPdf, setIsProcessingPdf] = useState(false);
   const fileInputRef = useRef(null);
 
-  // FIP Knowledge Base - extracted from the provided documents
+  // Comprehensive FIP Knowledge Base - Updated with new document
   const fipKnowledgeBase = {
-    types: {
-      wet: "Usually beginning with high temperature, loss of appetite and lethargy, cats with Wet FIP have abdominal effusions usually accompanied with an enlarged abdominal cavity, basically the stomach appearing abnormally enlarged, rounded and bloated. Sometimes vomiting, diarrhea or jaundice are added.",
-      pleural: "Showing similar symptoms of lethargy, high temperature and loss of appetite as Wet FIP, in Pleural FIP cats have thoracic (chest) effusions often accompanied with breathing problems (dyspnea). Sometimes this can be confused with pneumonia leading to delayed diagnosis.",
-      dry: "Often more difficult to diagnose, Dry FIP also tends to be more chronic, progressing over a few weeks to months. With no fluid accumulation, this form presents itself with some subtle symptoms like fatigue and gradual weight loss, later accompanied with additional signs depending on the organs affected.",
-      ocular: "When the virus manages to reach the eyes it's called Ocular FIP. Uveitis can affect the eyes, making them look cloudy and changing the colour of the iris. Conjunctivitis and inflammation or bleeding in the anterior chamber are common too.",
-      neurological: "When the virus crosses the blood-brain barrier, inflammation can enter the brain and spinal cord and cause a spectrum of progressive neurologic abnormalities. Signs include ataxia (uncoordinated movements), head tilt, unsteady walk, floor or wall licking, postural reaction deficits, seizures, paralysis, personality changes and even dementia."
+    overview: {
+      definition: "FIP is a fatal, immune-mediated disease caused by pathotypes of feline coronavirus (FCoV)",
+      prevalence: "FCoV seropositivity 30-90% in multi-cat environments; <5% develop FIP",
+      mortality: "Nearly 100% fatal without treatment; 85-95% remission with early antiviral therapy",
+      pathogenesis: "Mutation in 3c, 7b and spike protein genes yields FIPV with macrophage tropism"
     },
-    bloodworkIndicators: {
-      wetFIP: {
-        hematocrit: "reduced",
-        reticulocyte: "normal to reduced",
-        neutrophils: "increased",
-        lymphocytes: "reduced",
-        mcv: "reduced",
-        totalProtein: "normal to elevated",
-        albumin: "normal to reduced",
-        globulins: "increased",
-        gammaglobulins: "increased",
-        ag: "reduced (<0.5)",
-        bilirubin: "increased",
-        acutePhaseProteins: "increased"
+    
+    riskFactors: {
+      age: "75% of cases <2 years; highest risk 3-16 months",
+      breeds: ["Abyssinian", "Bengal", "Birman", "Burmese", "Devon Rex", "Ragdoll", "Rex breeds"],
+      environmental: ["Overcrowding", "New cat introductions", "Immunosuppression", "Pregnancy", "Recent surgery/illness"],
+      genetics: "Host susceptibility loci under investigation"
+    },
+    
+    types: {
+      wet: {
+        description: "Immune complex-driven vasculitis with high-protein effusions",
+        symptoms: "Abdominal distension, dyspnea, pleural/peritoneal effusion, fever, anorexia",
+        medianSurvival: "1-2 weeks without treatment",
+        keyFindings: "Straw-gold viscous effusion, TP >3.5 g/dL, low TNCC (<5×10³/µL)"
       },
-      dryFIP: {
-        hematocrit: "normal to reduced",
-        reticulocyte: "normal to reduced",
-        neutrophils: "increased",
-        lymphocytes: "normal to reduced",
-        mcv: "reduced",
-        totalProtein: "normal to elevated",
-        albumin: "normal to reduced",
-        globulins: "increased",
-        gammaglobulins: "increased",
-        ag: "reduced (<0.5)",
-        bilirubin: "normal to elevated",
-        acutePhaseProteins: "increased"
+      
+      injectionGuidance: {
+        technique: "Subcutaneous only - rotate sites between shoulders, sides, lower back",
+        preparation: "Room temperature GS, have treats ready, wrap in towel if needed",
+        timing: "Same time daily (within 1-2 hours), consistency crucial",
+        normalReactions: "Stinging normal, small blood drops OK, lumps at injection site",
+        migration: "Fluid may migrate to armpit/side - absorbs in 24 hours",
+        vagalResponse: "Rare collapse/fainting post-injection - recovers in 5-10 minutes"
+      },
+      
+      emergencySigns: {
+        respiratory: "Labored breathing, open-mouth breathing",
+        neurological: "Seizures, fixed pupils, sudden collapse",
+        cardiovascular: "Pale/white gums, hypothermia <97°F",
+        renal: "No urination >24 hours",
+        hepatic: "Severe jaundice, extreme lethargy",
+        general: "Not eating >48 hours, severe dehydration"
+      },
+      
+      brandGuidance: {
+        gs441524: "Most accessed through caregiver networks from China",
+        quality: "Verify with admin groups - avoid brands with unproven claims",
+        warning: "Beware '30-day cure' claims - minimum 84 days required",
+        legal: "GS not legally available in India; Remdesivir is legal alternative"
+      },
+      dry: {
+        description: "Granulomas in multiple organs without effusion",
+        symptoms: "Chronic fever, weight loss, lethargy, organ-specific signs",
+        medianSurvival: "2-4 weeks without treatment",
+        keyFindings: "Mesenteric lymphadenopathy >1cm, renal cortical nodules, splenomegaly"
+      },
+      ocular: {
+        description: "Anterior uveitis, chorioretinitis when virus reaches eyes",
+        symptoms: "Uveitis, keratic precipitates, glaucoma, hyphema, iris color change",
+        medianSurvival: "Variable, depends on systemic involvement",
+        keyFindings: "Aqueous humor PCR positive, inflammatory cells in anterior chamber"
+      },
+      neurological: {
+        description: "Meningitis, ependymitis when virus crosses blood-brain barrier",
+        symptoms: "Ataxia, seizures, paresis, behavioral changes, head tilt, dementia",
+        medianSurvival: "1-3 weeks without treatment",
+        keyFindings: "CSF protein >0.3 g/dL, neutrophilic pleocytosis, MRI enhancement"
       }
     },
-    diagnosticTools: {
-      ultrasound: "The presence of abdominal or thoracic fluid strongly supports a diagnosis of wet or pleural FIP. One of the earliest and most telling ultrasound signs is mesenteric lymphadenopathy. Other useful findings include hepatic and splenic changes, thickened intestinal walls with loss of layering, or peritoneal inflammation.",
-      pcr: "A positive PCR result, especially on effusion or FNA from a lymph node- is highly specific for FIP. However, a negative result does not rule it out, especially in dry cases.",
-      rivalta: "A simple, in-house test that can support FIP diagnosis. While it helps differentiate protein-rich effusions, it is not FIP-specific and both false positives and negatives are possible.",
-      imaging: "MRI is particularly useful in neuro FIP - findings may include meningeal enhancement, ventricular dilation, or brain edema. CT scans may reveal fluid accumulation, lymphadenopathy, or organ abnormalities not clearly visible on ultrasound."
+    
+    diagnosticCriteria: {
+      minimumDatabase: {
+        cbc: {
+          findings: "Non-regenerative anemia, lymphopenia <1.5×10⁹/L, neutrophilia",
+          weight: "HIGH"
+        },
+        chemistry: {
+          findings: "Hyperglobulinemia >50g/L, hypoalbuminemia, A:G <0.4",
+          weight: "HIGH"
+        },
+        acutePhaseProteins: {
+          findings: "α1-acid glycoprotein >1.5 g/L, SAA >20 mg/L",
+          weight: "HIGH"
+        },
+        effusionAnalysis: {
+          findings: "Rivalta positive, TP >3.5 g/dL, low cellularity",
+          weight: "HIGH"
+        }
+      },
+      
+      confirmatory: {
+        rtPCR: {
+          method: "RT-qPCR on effusion, FNA, or tissue",
+          interpretation: "Ct <27 or >10⁷ copies/mL highly confident",
+          specificity: "95% when combined with clinical signs"
+        },
+        immunohistochemistry: {
+          method: "FCoV antigen in macrophages",
+          interpretation: "Gold standard when paired with pyogranulomatous vasculitis",
+          specificity: "Near 100%"
+        },
+        scoringSystems: {
+          fipScore: "≥7 points indicates FIP (A:G, globulin, age, Rivalta, titre)",
+          ucDavisCalc: "AUROC 0.94 with 19 variables"
+        }
+      }
     },
-    recommendedSamples: {
-      wet: "Effusion",
-      pleural: "Effusion",
-      dry: "Fine needle aspirate of affected Mesenteric Lymph Nodes",
-      ocular: "Aqueous humor",
-      neurological: "Cerebrospinal fluid (via CSF tap)"
+    
+    diagnosticAlgorithms: {
+      wetFIP: {
+        step1: "Effusion present → Perform Rivalta test",
+        step2: "If Rivalta positive → RT-qPCR on effusion",
+        step3: "Ct <27 → Highly confident FIP diagnosis",
+        step4: "Ct ≥27 → ICC/IHC on cell block or tissue biopsy"
+      },
+      dryFIP: {
+        step1: "Focused ultrasound → identify organ changes",
+        step2: "FNA from 2 organs → cytology + RT-qPCR",
+        step3: "If PCR equivocal → Tru-cut biopsy + histopathology + IHC",
+        step4: "Pyogranulomatous vasculitis + FCoV antigen = definitive"
+      },
+      neurologicalFIP: {
+        step1: "MRI brain/spine → meningeal enhancement, ventricular dilation",
+        step2: "CSF analysis → protein >0.3 g/dL, neutrophilic pleocytosis",
+        step3: "CSF RT-qPCR → Ct <28 highly supportive",
+        step4: "Consider aqueous humor tap if ocular signs present"
+      }
+    },
+    
+    bloodworkIndicators: {
+      wetFIP: {
+        hematocrit: "Reduced (<30%)",
+        reticulocyte: "Normal to reduced",
+        neutrophils: "Increased (>12×10⁹/L)",
+        lymphocytes: "Reduced (<1.5×10⁹/L)",
+        mcv: "Reduced",
+        totalProtein: "Normal to elevated (>75 g/L)",
+        albumin: "Normal to reduced (<25 g/L)",
+        globulins: "Increased (>50 g/L)",
+        gammaglobulins: "Increased with broad polyclonal peak",
+        ag: "Reduced (<0.4 diagnostic, <0.5 suspicious)",
+        bilirubin: "Increased (>2 mg/dL)",
+        acutePhaseProteins: "Markedly increased",
+        alt: "Mild to moderate increase",
+        ldh_hl_ratio: ">0.9 supportive"
+      },
+      dryFIP: {
+        hematocrit: "Normal to reduced",
+        reticulocyte: "Normal to reduced",
+        neutrophils: "Increased",
+        lymphocytes: "Normal to reduced",
+        mcv: "Reduced",
+        totalProtein: "Normal to elevated",
+        albumin: "Normal to reduced",
+        globulins: "Increased (>45 g/L)",
+        gammaglobulins: "Increased",
+        ag: "Reduced (<0.5)",
+        bilirubin: "Normal to elevated",
+        acutePhaseProteins: "Increased",
+        alt: "Variable elevation"
+      }
+    },
+    
+    differentialDiagnosis: {
+      lymphoma: {
+        distinguishing: "PARR clonality, FeLV status, ultrasonographic pattern",
+        overlaps: "Granulomas, effusion, weight loss"
+      },
+      toxoplasmosis: {
+        distinguishing: "IgM ≥1:64, PCR for T. gondii",
+        overlaps: "Pyrexia, neuro-ocular signs"
+      },
+      bacterialPeritonitis: {
+        distinguishing: "Degenerate neutrophils, bacteria on cytology, culture positive",
+        overlaps: "Septic effusion, fever"
+      },
+      chylothorax: {
+        distinguishing: "Effusion triglycerides >serum",
+        overlaps: "Milky effusion"
+      },
+      chf: {
+        distinguishing: "NT-proBNP >270 pmol/L, echocardiography",
+        overlaps: "Pleural effusion, dyspnea"
+      }
+    },
+    
+    treatment: {
+      antivirals: {
+        gs441524: {
+          injectable: {
+            wetFIP: "Minimum 8 mg/kg SC q24h",
+            dryFIP: "Minimum 8 mg/kg SC q24h",
+            pleuralFIP: "Minimum 10 mg/kg SC q24h",
+            ocularFIP: "Minimum 10 mg/kg SC q24h",
+            neurologicalFIP: "Minimum 12 mg/kg SC q24h",
+            criticalProtocol: "Full dose may be split q12h until stable"
+          },
+          oral: {
+            dosing: "Double the injectable dose due to 50% bioavailability",
+            maxDose: "If >30mg/kg (15mg/kg injectable equivalent), split to q12h",
+            fasting: "Fast 1 hour before and 1 hour after administration"
+          },
+          duration: "Minimum 84 days",
+          startProtocol: "Injectable for first 2-4 weeks (10% higher survival rate)",
+          monitoring: "Weekly weight checks MANDATORY - adjust dose for weight gain",
+          remissionRate: "85-95% for non-neurological with proper dosing",
+          storage: "Room temperature, away from direct light"
+        },
+        remdesivir: {
+          dosing: {
+            wetFIP: "Minimum 12 mg/kg, ideally 15 mg/kg",
+            dryFIP: "Minimum 12 mg/kg, ideally 15 mg/kg",
+            pleuralFIP: "Minimum 15 mg/kg",
+            ocularFIP: "Minimum 15 mg/kg, ideally 20 mg/kg",
+            neurologicalFIP: "Minimum 20 mg/kg"
+          },
+          administration: "IV initially, then SC at home",
+          duration: "Minimum 84 days",
+          storage: "Refrigerate after reconstitution",
+          notes: "Legal in India as human drug, off-label veterinary use",
+          sideEffects: "Similar to GS, rare pleural effusion, monitor kidney function"
+        },
+        eidd: {
+          molnupiravir: {
+            dose: "10-15 mg/kg PO q12h",
+            availability: "Legal in India for human COVID-19",
+            use: "GS-resistant cases, relapse with neuro/ocular"
+          },
+          eidd1931: {
+            dose: "10-15 mg/kg PO q12h",
+            cns_penetration: "Better than EIDD-2801",
+            availability: "Unregulated"
+          },
+          duration: "Minimum 84 days",
+          toxicityMonitoring: "WBC count, floppy ears, broken whiskers, hair loss",
+          warnings: "MUTAGENIC - Never use in kittens or pregnant cats",
+          contraindications: "Not first-line; reserve for resistant/relapsed cases"
+        },
+        gc376: {
+          dose: "15 mg/kg SC q12h",
+          use: "Combination therapy, when GS unavailable",
+          efficacy: "Less effective for neuro/ocular",
+          notes: "Expected veterinary release soon by Anivive"
+        },
+        nirmatrelvir: {
+          use: "Experimental - advanced neuro relapses only",
+          availability: "Research settings only",
+          notes: "Do not use without veterinary supervision"
+        }
+      },
+      supportive: {
+        appetite: {
+          mirtazapine: "1.88-3.75 mg/cat q48h",
+          maropitant: "1 mg/kg SC q24h for nausea",
+          ondansetron: "0.5-1 mg/kg PO/SC q12-24h"
+        },
+        hepatic: {
+          same: "20 mg/kg PO q24h",
+          silymarin: "5-10 mg/kg PO q24h",
+          monitoring: "ALT/AST q2-4 weeks"
+        },
+        neurological: {
+          levetiracetam: "20 mg/kg PO q8h (up to 60 mg/kg for severe)",
+          gabapentin: "5-10 mg/kg PO q8-12h",
+          phenobarbital: "2-3 mg/kg PO q12h (monitor liver)"
+        },
+        hydration: "SC fluids 10-20 mL/kg as needed",
+        nutrition: "200-250 kcal/day minimum, small frequent meals",
+        probiotics: "FortiFlora or similar daily",
+        b12: "250 mcg SC weekly if anemic/GI issues"
+      },
+      contraindicated: {
+        lysine: "NEVER give - antagonizes arginine, interferes with GS",
+        antibiotics_avoid: [
+          "Fluoroquinolones (Baytril, Enrofloxacin, Zeniquin)",
+          "Marbofloxacin, Pradofloxacin, Orbifloxacin",
+          "Convenia (long-acting cephalosporin)"
+        ],
+        antibiotics_safe: [
+          "Doxycycline", "Amoxicillin", "Augmentin",
+          "Clindamycin", "Cephalexin", "Penicillin"
+        ],
+        flea_treatment: "Avoid during treatment - use flea comb instead"
+      },
+      monitoring: {
+        weight: "Weekly weighing MANDATORY - adjust dose immediately",
+        bloodwork: "CBC & Chemistry q4 weeks (q2 weeks if using EIDD)",
+        observation: "84-day post-treatment observation period",
+        sterilization: "Safest between weeks 8-10, minimum 2 weeks GS post-surgery"
+      },
+      relapse: {
+        signs: "Fever return, appetite loss, new neuro signs, effusions",
+        protocol: "Restart injectable immediately at previous dose +5 mg/kg",
+        neuroRelapse: "Start at 15 mg/kg injectable minimum",
+        combination: "Consider adding EIDD under expert guidance",
+        duration: "Another full 84 days"
+      }
+    },
+    
+    prognosis: {
+      earlyTreatment: {
+        wetDry: "85-95% remission, >12mo survival",
+        ocular: "75-85% remission, 6-12mo survival",
+        neurological: "60-70% remission, 4-8mo survival"
+      },
+      delayedTreatment: {
+        overall: "<50% remission, <6mo survival",
+        factors: "Treatment delay >2 weeks significantly worsens prognosis"
+      }
+    },
+    
+    sampleCollection: {
+      effusion: {
+        container: "EDTA (purple top)",
+        temperature: "4°C",
+        maxTransit: "48 hours"
+      },
+      tissue: {
+        container: "Formalin + fresh for PCR",
+        temperature: "RT/4°C",
+        maxTransit: "72 hours"
+      },
+      csf: {
+        container: "Plain sterile tube",
+        temperature: "Ice pack",
+        maxTransit: "24 hours"
+      },
+      aqueousHumor: {
+        container: "Plain sterile",
+        temperature: "Ice pack",
+        maxTransit: "24 hours"
+      }
     }
   };
 
@@ -100,31 +393,26 @@ const FIPDiagnosticChatbot = () => {
       for (let pageNum = 1; pageNum <= pdf.numPages; pageNum++) {
         const page = await pdf.getPage(pageNum);
         
-        // Create canvas for rendering
         const canvas = document.createElement('canvas');
         const context = canvas.getContext('2d');
         
-        // Set high resolution for better text recognition
         const scale = 2.0;
         const viewport = page.getViewport({ scale });
         
         canvas.width = viewport.width;
         canvas.height = viewport.height;
         
-        // Render page to canvas
         await page.render({
           canvasContext: context,
           viewport: viewport
         }).promise;
         
-        // Convert canvas to image data
         const imageDataUrl = canvas.toDataURL('image/png', 0.9);
         
-        // Create a file-like object for the converted image
         const imageFile = {
           name: `${pdfFile.name}_page_${pageNum}.png`,
           type: 'image/png',
-          size: imageDataUrl.length * 0.75, // Approximate size
+          size: imageDataUrl.length * 0.75,
           file: {
             arrayBuffer: () => Promise.resolve(dataURLToArrayBuffer(imageDataUrl))
           },
@@ -150,12 +438,10 @@ const FIPDiagnosticChatbot = () => {
     for (const file of files) {
       if (file.type === 'application/pdf') {
         try {
-          // Convert PDF to images
           const convertedImages = await convertPdfToImages(file);
           processedFiles.push(...convertedImages);
         } catch (error) {
           console.error('PDF conversion error:', error);
-          // Add original PDF file with error note
           processedFiles.push({
             name: file.name,
             type: file.type,
@@ -165,7 +451,6 @@ const FIPDiagnosticChatbot = () => {
           });
         }
       } else {
-        // Regular file processing
         processedFiles.push({
           name: file.name,
           type: file.type,
@@ -180,47 +465,78 @@ const FIPDiagnosticChatbot = () => {
 
   const analyzeWithOpenAI = async (userInput, files = []) => {
     try {
-      // Prepare the system message with knowledge base
-      const systemMessage = `You are a FIP (Feline Infectious Peritonitis) diagnostic assistant. You must base ALL responses EXCLUSIVELY on the following vetted knowledge base from FIP Warriors® India x FSGI Foundation and ABCD veterinary guidelines:
+      // Prepare comprehensive system message with full knowledge base
+      const systemMessage = `You are an advanced FIP (Feline Infectious Peritonitis) diagnostic and treatment assistant with comprehensive veterinary knowledge from ABCD Europe, UC Davis CCAH, FIP Warriors® India x FSGI Foundation, and peer-reviewed literature through 2025.
 
-FIP TYPES AND SYMPTOMS:
-${Object.entries(fipKnowledgeBase.types).map(([type, desc]) => `${type.toUpperCase()}: ${desc}`).join('\n\n')}
+COMPREHENSIVE FIP KNOWLEDGE BASE:
 
-BLOOD WORK INDICATORS:
-WET FIP: ${Object.entries(fipKnowledgeBase.bloodworkIndicators.wetFIP).map(([param, value]) => `${param}: ${value}`).join(', ')}
-DRY FIP: ${Object.entries(fipKnowledgeBase.bloodworkIndicators.dryFIP).map(([param, value]) => `${param}: ${value}`).join(', ')}
+${JSON.stringify(fipKnowledgeBase, null, 2)}
 
-DIAGNOSTIC TOOLS:
-${Object.entries(fipKnowledgeBase.diagnosticTools).map(([tool, desc]) => `${tool.toUpperCase()}: ${desc}`).join('\n\n')}
+CRITICAL CLINICAL INSTRUCTIONS:
 
-CRITICAL DIAGNOSTIC PROTOCOL:
-- A:G ratio <0.5 is THE MOST IMPORTANT FIP indicator
-- Total protein, Globulins, Albumin are essential
-- NEVER confirm FIP without proper blood parameters
-- Use only "FIP should be considered" or "Strong clinical suspicion" without confirmatory tests
-- Always emphasize veterinary consultation
+DIAGNOSIS:
+1. Follow diagnostic algorithms systematically (wet→Rivalta→PCR; dry→ultrasound→FNA)
+2. A:G ratio <0.4 is DIAGNOSTIC, <0.5 is SUSPICIOUS for FIP
+3. FIP-Score ≥7 points indicates FIP
+4. PCR on effusion/FNA: Ct <27 highly confident
+5. Gold standard: IHC showing FCoV in macrophages + pyogranulomatous vasculitis
 
-ANALYSIS INSTRUCTIONS:
-- Focus on A:G ratio as primary indicator
-- Analyze images for FIP signs (fluid, lymphadenopathy, organ changes)
-- Always request missing critical blood parameters
-- Provide structured medical assessments
-- Maintain conversation context and refer to previously discussed information`;
+TREATMENT PROTOCOLS:
+1. GS-441524 Injectable Dosing (EVF Guidelines):
+   - Wet/Dry: 8 mg/kg minimum
+   - Pleural: 10 mg/kg minimum
+   - Ocular: 10 mg/kg minimum
+   - Neurological: 12 mg/kg minimum
+   - Critical cases: Split dose q12h initially
+   
+2. Start with injectable for 2-4 weeks (10% higher survival rate)
+3. Oral GS requires DOUBLE the injectable dose (50% bioavailability)
+4. Duration: MINIMUM 84 days + 84 days observation
+5. Weekly weight checks MANDATORY - adjust dose immediately
+6. Remdesivir available as legal alternative in India
 
-      // Convert the UI messages to API format for conversation history
+MONITORING:
+- CBC & Chemistry every 4 weeks
+- Target: A:G ≥0.8, normal hematocrit, effusion resolution
+- Watch for relapse signs during 84-day observation
+- Relapse protocol: Previous dose +5 mg/kg injectable
+
+EMERGENCY SIGNS:
+- Labored breathing, seizures, pale gums
+- No urination >24 hours, hypothermia <97°F
+- Immediate veterinary care required
+
+CONTRAINDICATIONS:
+- NEVER give Lysine (interferes with GS)
+- Avoid fluoroquinolones in neuro cases
+- No flea treatments during therapy
+
+PROGNOSIS:
+- Early treatment: 85-95% remission (wet/dry)
+- Neurological: 60-70% remission
+- Delayed treatment (>2 weeks): <50% remission
+
+When providing recommendations:
+1. Always calculate specific doses based on weight and FIP type
+2. Emphasize the importance of proper dosing and weight monitoring
+3. Provide both GS-441524 and Remdesivir options (noting Remdesivir is legal in India)
+4. Include supportive care recommendations
+5. Stress veterinary consultation importance
+6. Maintain conversation context and refer to previous information
+7. For images: Identify effusions, lymphadenopathy, organ changes, ocular/neurological signs`;
+
+      // Convert conversation history to API format
       const conversationMessages = [];
       
-      // Add system message first
       conversationMessages.push({
         role: "system",
         content: systemMessage
       });
 
-      // Convert previous messages to API format (excluding the initial assistant greeting)
+      // Add previous messages (excluding initial greeting)
       for (let i = 1; i < messages.length; i++) {
         const msg = messages[i];
         if (msg.role === 'user') {
-          // For user messages, convert to simple text format
           let content = msg.content;
           if (msg.files && msg.files.length > 0) {
             content += `\n\nFiles uploaded: ${msg.files.map(f => f.name).join(', ')}`;
@@ -237,10 +553,8 @@ ANALYSIS INSTRUCTIONS:
         }
       }
 
-      // Prepare current user message content
+      // Prepare current user message
       let userMessageContent = [];
-      
-      // Add text content
       let textContent = "";
       
       if (userInput) {
@@ -252,18 +566,15 @@ ANALYSIS INSTRUCTIONS:
       const pdfFiles = files.filter(f => f.type === 'application/pdf');
       
       if (imageFiles.length > 0) {
-        textContent += `${imageFiles.length} medical image(s) uploaded for analysis. Please examine for FIP indicators.\n\n`;
+        textContent += `${imageFiles.length} medical image(s) uploaded for FIP analysis.\n\n`;
         
-        // Process images for OpenAI (including converted PDF pages)
         for (const file of imageFiles) {
           try {
             let base64Data;
             
-            // Check if this is a converted PDF image
             if (file.dataUrl) {
               base64Data = file.dataUrl.split(",")[1];
             } else {
-              // Regular image file
               base64Data = await new Promise((resolve, reject) => {
                 const reader = new FileReader();
                 reader.onload = () => {
@@ -288,42 +599,34 @@ ANALYSIS INSTRUCTIONS:
           }
         }
       }
-      
-      if (pdfFiles.length > 0) {
-        const pdfErrors = pdfFiles.filter(f => f.conversionError);
-        if (pdfErrors.length > 0) {
-          textContent += `${pdfErrors.length} PDF document(s) could not be converted to images. Please describe their contents or try uploading screenshots.\n\n`;
-        }
-      }
 
-      // Only add the assessment instructions for the first user message
-      if (conversationMessages.length === 1) {
-        textContent += `Please provide a comprehensive FIP assessment:
+      // Assessment request
+      textContent += `Please provide a comprehensive FIP assessment following the diagnostic algorithms:
 
-1. **Critical Blood Parameters**: Check for A:G ratio, total protein, globulins
-2. **Image Analysis** (if provided): Identify any FIP-related findings
-3. **Clinical Assessment**: Match symptoms to FIP types from knowledge base  
-4. **Diagnostic Recommendations**: Next steps based on available data
-5. **Veterinary Emphasis**: Stress professional consultation
+1. **Initial Triage**: Signalment, history, clinical signs matching FIP types
+2. **Laboratory Analysis**: Focus on A:G ratio, globulins, albumin, CBC findings
+3. **FIP Score Calculation**: Apply modified FIP-Score if data available
+4. **Image Analysis**: Identify effusions, lymphadenopathy, organ changes
+5. **Diagnostic Algorithm**: Follow wet/dry/neuro pathway as appropriate
+6. **Differential Diagnosis**: Rule out key differentials
+7. **Treatment Recommendations**: If FIP suspected, provide specific GS-441524 dosing
+8. **Monitoring Plan**: Outline follow-up testing schedule
+9. **Prognosis**: Based on type and treatment timing
 
-Remember: A:G ratio <0.5 is the primary FIP indicator. Never confirm FIP without proper blood work.`;
-      }
+Format your response with clear sections and emphasize critical findings.`;
 
-      // Add text to user message content
       userMessageContent.push({
         type: "text",
         text: textContent
       });
 
-      // Add current user message to conversation
       conversationMessages.push({
         role: "user",
         content: userMessageContent
       });
 
-      console.log("Calling backend API with conversation history...");
+      console.log("Calling backend API with comprehensive knowledge base...");
 
-      // Call your Netlify function with full conversation history
       const apiEndpoint = '/.netlify/functions/openai';
 
       const response = await fetch(apiEndpoint, {
@@ -333,7 +636,7 @@ Remember: A:G ratio <0.5 is the primary FIP indicator. Never confirm FIP without
         },
         body: JSON.stringify({
           messages: conversationMessages,
-          model: "gpt-4o-mini" // Using mini model for cost efficiency
+          model: "gpt-4o-mini"
         })
       });
 
@@ -345,10 +648,8 @@ Remember: A:G ratio <0.5 is the primary FIP indicator. Never confirm FIP without
           return "❌ **Authentication Error**: Server API key configuration issue. Please contact the administrator.";
         } else if (response.status === 429) {
           return "⏳ **Rate Limit**: Too many requests. Please wait a moment and try again.";
-        } else if (response.status === 402) {
-          return "💳 **Billing Issue**: Insufficient credits. Please contact the administrator to check OpenAI account billing.";
         } else if (response.status === 500 && errorData.error?.includes('API key not configured')) {
-          return "⚙️ **Configuration Error**: Server API key not configured. Please contact the administrator.";
+          return "⚙️ **Configuration Error**: Server API key not configured. Please deploy with OPENAI_API_KEY environment variable.";
         } else {
           return `❌ **API Error** (${response.status}): ${errorData.error || 'Unknown error'}`;
         }
@@ -366,19 +667,7 @@ Remember: A:G ratio <0.5 is the primary FIP indicator. Never confirm FIP without
       console.error("Error in analyzeWithOpenAI:", error);
       
       if (error.message.includes('fetch')) {
-        return `❌ **Connection Error**: Cannot connect to Netlify function. 
-
-**If you're running locally**: 
-- Make sure you're using \`netlify dev\` to run the development server
-- The function should be available at \`/.netlify/functions/openai\`
-- Check that OPENAI_API_KEY is set in your .env file
-
-**If deployed**: 
-- Check that your Netlify function deployed successfully
-- Verify OPENAI_API_KEY environment variable is set in Netlify dashboard
-- View function logs in Netlify dashboard
-
-**Environment Variable Setup**: Add OPENAI_API_KEY=your_key_here to your environment`;
+        return `❌ **Connection Error**: Cannot connect to backend. Ensure Netlify function is deployed and OPENAI_API_KEY is configured.`;
       }
       
       return `❌ **Error**: ${error.message}`;
@@ -434,8 +723,8 @@ Remember: A:G ratio <0.5 is the primary FIP indicator. Never confirm FIP without
                 <Stethoscope className="w-10 h-10" />
               </div>
               <div>
-                <h1 className="text-3xl font-bold mb-2">FIP Diagnostic Assistant</h1>
-                <p className="text-blue-100 text-lg">Evidence-based FIP assessment using vetted veterinary protocols</p>
+                <h1 className="text-3xl font-bold mb-2">Advanced FIP Diagnostic Assistant</h1>
+                <p className="text-blue-100 text-lg">Evidence-based assessment using ABCD Europe & UC Davis protocols</p>
               </div>
             </div>
           </div>
@@ -444,38 +733,57 @@ Remember: A:G ratio <0.5 is the primary FIP indicator. Never confirm FIP without
           <div className="p-4 bg-green-50 border-b border-green-200">
             <div className="flex items-center gap-2">
               <CheckCircle className="w-4 h-4 text-green-600" />
-              <span className="text-sm font-medium text-green-800">Ready for Analysis</span>
+              <span className="text-sm font-medium text-green-800">Ready for Analysis - Comprehensive Knowledge Base Active</span>
             </div>
             <p className="text-xs text-green-700 mt-1">
-              API key configured via environment variable. Upload medical documents to begin analysis.
+              Updated with latest 2024-2025 guidelines. Upload medical documents to begin assessment.
             </p>
           </div>
 
           {/* Key Information Cards */}
           <div className="p-6 bg-gradient-to-r from-blue-50 to-indigo-50">
-            <div className="grid md:grid-cols-3 gap-4 mb-6">
+            <div className="grid md:grid-cols-4 gap-4 mb-6">
               <div className="bg-white rounded-xl p-4 border-l-4 border-red-500 shadow-sm">
                 <div className="flex items-center gap-3 mb-2">
                   <AlertTriangle className="w-5 h-5 text-red-500" />
-                  <h3 className="font-semibold text-gray-800">Critical Parameter</h3>
+                  <h3 className="font-semibold text-gray-800">Critical</h3>
                 </div>
-                <p className="text-sm text-gray-600">A:G ratio &lt;0.5 is the most important FIP indicator</p>
+                <p className="text-sm text-gray-600">A:G &lt;0.4 diagnostic<br/>A:G &lt;0.5 suspicious</p>
               </div>
               
               <div className="bg-white rounded-xl p-4 border-l-4 border-amber-500 shadow-sm">
                 <div className="flex items-center gap-3 mb-2">
-                  <CheckCircle className="w-5 h-5 text-amber-500" />
-                  <h3 className="font-semibold text-gray-800">Essential Values</h3>
+                  <Activity className="w-5 h-5 text-amber-500" />
+                  <h3 className="font-semibold text-gray-800">FIP Score</h3>
                 </div>
-                <p className="text-sm text-gray-600">Total protein, Globulins, Albumin required</p>
+                <p className="text-sm text-gray-600">≥7 points = FIP<br/>Integrates 5 parameters</p>
               </div>
               
               <div className="bg-white rounded-xl p-4 border-l-4 border-green-500 shadow-sm">
                 <div className="flex items-center gap-3 mb-2">
-                  <Info className="w-5 h-5 text-green-500" />
-                  <h3 className="font-semibold text-gray-800">PDF Support</h3>
+                  <CheckCircle className="w-5 h-5 text-green-500" />
+                  <h3 className="font-semibold text-gray-800">Prognosis</h3>
                 </div>
-                <p className="text-sm text-gray-600">PDFs auto-converted to images for analysis</p>
+                <p className="text-sm text-gray-600">85-95% remission<br/>with early treatment</p>
+              </div>
+              
+              <div className="bg-white rounded-xl p-4 border-l-4 border-blue-500 shadow-sm">
+                <div className="flex items-center gap-3 mb-2">
+                  <BookOpen className="w-5 h-5 text-blue-500" />
+                  <h3 className="font-semibold text-gray-800">Algorithms</h3>
+                </div>
+                <p className="text-sm text-gray-600">Wet, Dry, Neuro<br/>diagnostic pathways</p>
+              </div>
+            </div>
+
+            {/* Quick Reference - Diagnostic Workflow */}
+            <div className="bg-blue-50 border border-blue-200 rounded-xl p-4 mb-4">
+              <h4 className="font-semibold text-blue-800 mb-2">Diagnostic Workflow</h4>
+              <div className="text-sm text-blue-700 space-y-1">
+                <p>• <strong>Wet FIP:</strong> Effusion → Rivalta → RT-PCR (Ct &lt;27 = confident)</p>
+                <p>• <strong>Dry FIP:</strong> Ultrasound → FNA (2 organs) → PCR/Histopathology</p>
+                <p>• <strong>Neuro FIP:</strong> MRI → CSF analysis → CSF PCR (Ct &lt;28)</p>
+                <p>• <strong>Treatment:</strong> GS-441524: 10-20 mg/kg based on type, 84+ days</p>
               </div>
             </div>
 
@@ -486,8 +794,8 @@ Remember: A:G ratio <0.5 is the primary FIP indicator. Never confirm FIP without
                 <div>
                   <h4 className="font-semibold text-amber-800 mb-1">Medical Disclaimer</h4>
                   <p className="text-sm text-amber-700">
-                    This tool provides educational information only and follows strict diagnostic protocols. 
-                    Always consult a qualified veterinarian for proper diagnosis and treatment.
+                    This tool provides evidence-based educational information following veterinary guidelines from ABCD Europe, UC Davis, and peer-reviewed literature. 
+                    Always consult a qualified veterinarian for diagnosis and treatment. GS-441524 usage may require compounding pharmacy access.
                   </p>
                 </div>
               </div>
@@ -550,7 +858,7 @@ Remember: A:G ratio <0.5 is the primary FIP indicator. Never confirm FIP without
                       <div className="w-2 h-2 bg-blue-500 rounded-full animate-bounce" style={{animationDelay: '0.1s'}}></div>
                       <div className="w-2 h-2 bg-blue-500 rounded-full animate-bounce" style={{animationDelay: '0.2s'}}></div>
                     </div>
-                    <span className="text-sm text-gray-500">Analyzing...</span>
+                    <span className="text-sm text-gray-500">Analyzing with comprehensive knowledge base...</span>
                   </div>
                 </div>
               </div>
@@ -599,7 +907,7 @@ Remember: A:G ratio <0.5 is the primary FIP indicator. Never confirm FIP without
                   <div className="mt-3 p-3 bg-yellow-50 rounded-lg border border-yellow-200">
                     <div className="flex items-center gap-2">
                       <div className="w-4 h-4 border-2 border-yellow-600 border-t-transparent rounded-full animate-spin"></div>
-                      <span className="text-sm text-yellow-800">Converting PDF to images...</span>
+                      <span className="text-sm text-yellow-800">Converting PDF to images for analysis...</span>
                     </div>
                   </div>
                 )}
@@ -616,22 +924,20 @@ Remember: A:G ratio <0.5 is the primary FIP indicator. Never confirm FIP without
                 className="hidden"
               />
               
-              {/* Upload button - full width on mobile */}
               <button
                 onClick={() => fileInputRef.current?.click()}
                 className="w-full sm:w-auto flex items-center justify-center gap-2 px-6 py-3 bg-gradient-to-r from-gray-100 to-gray-200 text-gray-700 rounded-xl hover:from-gray-200 hover:to-gray-300 transition-all duration-200 shadow-sm font-medium"
               >
                 <Upload className="w-4 h-4" />
-                Upload Files
+                Upload Medical Documents
               </button>
               
-              {/* Input area - stack on mobile, flex on desktop */}
               <div className="flex flex-col sm:flex-row gap-3">
                 <textarea
                   value={inputMessage}
                   onChange={(e) => setInputMessage(e.target.value)}
                   onKeyPress={handleKeyPress}
-                  placeholder="Describe your cat's symptoms, age, and any concerns..."
+                  placeholder="Describe symptoms, provide blood work values, or ask specific questions about FIP diagnosis..."
                   className="flex-1 p-4 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent resize-none shadow-sm min-h-[100px]"
                   rows="3"
                 />
@@ -642,13 +948,13 @@ Remember: A:G ratio <0.5 is the primary FIP indicator. Never confirm FIP without
                   className="w-full sm:w-auto px-6 py-3 bg-gradient-to-r from-blue-500 to-indigo-600 text-white rounded-xl hover:from-blue-600 hover:to-indigo-700 disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200 shadow-lg font-medium flex items-center justify-center gap-2"
                 >
                   <Send className="w-5 h-5" />
-                  <span className="sm:hidden">Send Message</span>
+                  <span className="sm:hidden">Analyze</span>
                 </button>
               </div>
             </div>
             
             <p className="text-xs text-gray-500 mt-3 text-center">
-              Upload X-rays, blood reports, ultrasound images, or medical documents • Supported: PDF, JPG, PNG, DOC, TXT
+              Upload blood work, X-rays, ultrasound images, or medical reports • Supported: PDF, JPG, PNG, DOC, TXT • Based on 2024-2025 veterinary guidelines
             </p>
           </div>
         </div>
